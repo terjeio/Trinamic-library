@@ -1,7 +1,7 @@
 /*
- * TMC2130_I2C_map.h - I2C <> SPI command mappings and datagrams for Trinamic TMC2130 stepper driver
+ * tmc_i2c_interface.h - I2C <> SPI command mappings and datagrams for Trinamic TMC2130 stepper driver
  *
- * v0.0.3 / 2019-07-23 / ©Io Engineering / Terje
+ * v0.0.3 / 2019-07-23 / (c) Io Engineering / Terje
  */
 
 /*
@@ -12,14 +12,14 @@ All rights reserved.
 Redistribution and use in source and binary forms, with or without modification,
 are permitted provided that the following conditions are met:
 
-· Redistributions of source code must retain the above copyright notice, this
+* Redistributions of source code must retain the above copyright notice, this
 list of conditions and the following disclaimer.
 
-· Redistributions in binary form must reproduce the above copyright notice, this
+* Redistributions in binary form must reproduce the above copyright notice, this
 list of conditions and the following disclaimer in the documentation and/or
 other materials provided with the distribution.
 
-· Neither the name of the copyright holder nor the names of its contributors may
+* Neither the name of the copyright holder nor the names of its contributors may
 be used to endorse or promote products derived from this software without
 specific prior written permission.
 
@@ -41,7 +41,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <stdint.h>
 
-#include "trinamic2130.h"
+#include "common.h"
 
 #pragma pack(push, 1)
 
@@ -96,21 +96,16 @@ typedef union {
     };
 } TMCI2C_monitor_status_reg_t;
 
-
 typedef struct {
-    TMC2130_addr_t addr;
+    TMC_addr_t addr;
     TMCI2C_enable_reg_t reg;
 } TMCI2C_enable_dgr_t;
 
 typedef struct {
-    TMC2130_addr_t addr;
+    TMC_addr_t addr;
     TMCI2C_monitor_status_reg_t reg;
 } TMCI2C_monitor_status_dgr_t;
 
 #pragma pack(pop)
-
-extern const uint8_t TMC2130_I2C_regmap[];
-
-TMCI2C_map_addr_t TMCI2C_GetMapAddress (uint8_t axis, TMC2130_addr_t regaddr);
 
 #endif

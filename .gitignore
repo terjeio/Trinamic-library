@@ -6,6 +6,9 @@ ehthumbs_vista.db
 # Folder config file
 Desktop.ini
 
+# Subversion folders
+.svn
+
 # Recycle Bin used on file shares
 $RECYCLE.BIN/
 

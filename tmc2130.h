@@ -1,25 +1,25 @@
 /*
- * trinamic2130.h - register and message (datagram) descriptors for Trinamic TMC2130 stepper driver
+ * tmc2130.h - register and message (datagram) descriptors for Trinamic TMC2130 stepper driver
  *
- * v0.0.3 / 2019-07-24 / ©Io Engineering / Terje
+ * v0.0.5 / 2020-01-05 / (c) Io Engineering / Terje
  */
 
 /*
 
-Copyright (c) 2018-2019, Terje Io
+Copyright (c) 2018-2021, Terje Io
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
 are permitted provided that the following conditions are met:
 
-· Redistributions of source code must retain the above copyright notice, this
+* Redistributions of source code must retain the above copyright notice, this
 list of conditions and the following disclaimer.
 
-· Redistributions in binary form must reproduce the above copyright notice, this
+* Redistributions in binary form must reproduce the above copyright notice, this
 list of conditions and the following disclaimer in the documentation and/or
 other materials provided with the distribution.
 
-· Neither the name of the copyright holder nor the names of its contributors may
+* Neither the name of the copyright holder nor the names of its contributors may
 be used to endorse or promote products derived from this software without
 specific prior written permission.
 
@@ -41,6 +41,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <stdint.h>
 #include <stdbool.h>
+
+#include "common.h"
 
 //#define TMC2130_COMPLETE // comment out for minimum set of registers
 
@@ -74,11 +76,11 @@ typedef enum {
 #define TMC2130_RANDOM_TOFF 1       // rndtf: 0 = fixed, 1 = random
 #define TMC2130_CHOPPER_MODE 0      // chm: 0 = spreadCycle, 1 = constant off time
 // TMC2130_CHOPPER_MODE 0 defaults
-#define TMC2130_HSTRT 3             // hstrt: 0 … 7
-#define TMC2130_HEND 2              // hend: -3 … 12
+#define TMC2130_HSTRT 3             // hstrt: 0 ï¿½ 7
+#define TMC2130_HEND 2              // hend: -3 ï¿½ 12
 // TMC2130_CHOPPER_MODE 1 defaults
 #define TMC2130_FAST_DECAY_TIME 13  // fd3 & hstrt: 0 - 15
-#define TMC2130_SINE_WAVE_OFFSET 2  // hend: -3 … 12
+#define TMC2130_SINE_WAVE_OFFSET 2  // hend: -3 ï¿½ 12
 
 // IHOLD_IRUN
 #define TMC2130_IRUN 31             // max. current
@@ -86,25 +88,25 @@ typedef enum {
 #define TMC2130_IHOLDDELAY 6
 
 // TPOWERDOWN
-#define TMC2130_TPOWERDOWN 128      // 0 … ((2^8)-1) * 2^18 tCLK
+#define TMC2130_TPOWERDOWN 128      // 0 ï¿½ ((2^8)-1) * 2^18 tCLK
 
 // EN_PWM_MODE
 #define TMC2130_EN_PWM_MODE 1       // en_pwm_ mode: 0 = stealthChop off, 1 = stealthChop on
 
 // TPWMTHRS
-#define TMC2130_TPWM_THRS 0         // tpwmthrs: 0 … 2^20 - 1 (20 bits)
+#define TMC2130_TPWM_THRS 0         // tpwmthrs: 0 ï¿½ 2^20 - 1 (20 bits)
 
 // PWM_CONF
 #define TMC2130_PWM_AUTOSCALE 1     // pwm_autoscale: 0 = forward controlled mode, 1 = automatic scaling
 #define TMC2130_PWM_FREQ 1          // pwm_freq: 0 = 1/1024, 1 = 2/683, 2 = 2/512, 3 = 2/410 fCLK
-#define TMC2130_PWM_AMPL 255        // pwm_ampl: 0 … 255
-#define TMC2130_PWM_GRAD 5          // pwm_autoscale = 1: 1 … 15, pwm_autoscale = 0: 0 … 255
+#define TMC2130_PWM_AMPL 255        // pwm_ampl: 0 ï¿½ 255
+#define TMC2130_PWM_GRAD 5          // pwm_autoscale = 1: 1 ï¿½ 15, pwm_autoscale = 0: 0 ï¿½ 255
 
 // COOLCONF
 #define TMC2130_COOLSTEP_ENABLE 0
 // TMC2130_COOLSTEP_ENABLE = 1 defaults
-#define TMC2130_COOLSTEP_SEMIN 1    // semin: 0 = coolStep off, 1 … 15 = coolStep on
-#define TMC2130_COOLSTEP_SEMAX 1    // semax: 0 … 15
+#define TMC2130_COOLSTEP_SEMIN 1    // semin: 0 = coolStep off, 1 ï¿½ 15 = coolStep on
+#define TMC2130_COOLSTEP_SEMAX 1    // semax: 0 ï¿½ 15
 
 // end of default values
 
@@ -133,9 +135,6 @@ typedef enum {
     TMC2130Reg_PWM_SCALE = 0x71,
     TMC2130Reg_ENCM_CTRL = 0x72,
     TMC2130Reg_LOST_STEPS = 0x73,
-// Custom registers used by I2C <> SPI bridge
-    TMC_I2CReg_MON_STATE = 0x7D,
-    TMC_I2CReg_ENABLE = 0x7E
 } tmc2130_regaddr_t;
 
 typedef union {
@@ -622,6 +621,7 @@ typedef union {
     uint32_t value;
     uint8_t data[4];
     TMC2130_gconf_reg_t gconf;
+    TMC2130_gstat_reg_t gstat;
     TMC2130_ioin_reg_t ioin;
     TMC2130_ihold_irun_reg_t ihold_irun;
     TMC2130_tpowerdown_reg_t tpowerdown;
@@ -654,7 +654,7 @@ typedef struct {
 typedef struct {
     // driver registers
     TMC2130_gconf_dgr_t gconf;
-    TMC2130_stat_dgr_t stat;
+    TMC2130_stat_dgr_t gstat;
     TMC2130_ioin_dgr_t ioin;
     TMC2130_ihold_irun_dgr_t ihold_irun;
     TMC2130_tpowerdown_dgr_t tpowerdown;
@@ -681,24 +681,13 @@ typedef struct {
     TMC2130_lost_steps_dgr_t lost_steps;
     TMC2130_status_t driver_status;
 
-    void *cs_pin;    // the CS pin for the stepper driver
-    uint32_t f_clk;
-    tmc2130_microsteps_t microsteps;
-    uint16_t r_sense; // mOhm
-    uint16_t current;  // mA
-    uint8_t hold_current_pct; // percent
-    bool cool_step_enabled;
+    trinamic_motor_t motor;
+    trinamic_config_t config;
 } TMC2130_t;
-
-typedef struct {
-    TMC2130_status_t (*WriteRegister)(TMC2130_t *driver, TMC2130_datagram_t *reg);
-    TMC2130_status_t (*ReadRegister)(TMC2130_t *driver, TMC2130_datagram_t *reg);
-} TMC_io_driver_t;
 
 #pragma pack(pop)
 
-void TMC_IOInit (void);
-void TMC2130_Init(TMC2130_t *driver);
+bool TMC2130_Init(TMC2130_t *driver);
 void TMC2130_SetDefaults (TMC2130_t *driver);
 void TMC2130_SetCurrent (TMC2130_t *driver, uint16_t mA, uint8_t hold_pct);
 uint16_t TMC2130_GetCurrent (TMC2130_t *driver);
@@ -706,11 +695,11 @@ uint32_t TMC2130_GetTPWMTHRS (TMC2130_t *driver, float stpmm);
 bool TMC2130_MicrostepsIsValid (uint16_t usteps);
 void TMC2130_SetMicrosteps(TMC2130_t *driver, tmc2130_microsteps_t usteps);
 void TMC2130_SetHybridThreshold (TMC2130_t *driver, uint32_t threshold, float steps_mm);
+void TMC2130_SetTHIGH (TMC2130_t *driver, float mm_sec, float steps_mm);
+void TMC2130_SetTCOOLTHRS (TMC2130_t *driver, float mm_sec, float steps_mm);
 void TMC2130_SetConstantOffTimeChopper(TMC2130_t *driver, uint8_t constant_off_time, uint8_t blank_time, uint8_t fast_decay_time, int8_t sine_wave_offset, bool use_current_comparator);
 TMC2130_datagram_t *TMC2130_GetRegPtr (TMC2130_t *driver, tmc2130_regaddr_t reg);
 TMC2130_status_t TMC2130_WriteRegister (TMC2130_t *driver, TMC2130_datagram_t *reg);
 TMC2130_status_t TMC2130_ReadRegister (TMC2130_t *driver, TMC2130_datagram_t *reg);
-
-extern void TMC_DriverInit (TMC_io_driver_t *drv);
 
 #endif
