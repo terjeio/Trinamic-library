@@ -1,7 +1,7 @@
 /*
  * tmc2130hal.h - interface for Trinamic TMC2130 stepper driver
  *
- * v0.0.1 / 2021-02-04 / (c) Io Engineering / Terje
+ * v0.0.2 / 2021-08-05 / (c) Io Engineering / Terje
  */
 
 /*
@@ -41,6 +41,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "tmchal.h"
 
-const tmchal_t *TMC2130_AddAxis (uint8_t axis, uint16_t current, uint8_t microsteps, uint8_t r_sense);
+const tmchal_t *TMC2130_AddMotor (motor_map_t motor, uint16_t current, uint8_t microsteps, uint8_t r_sense);
 
 #endif

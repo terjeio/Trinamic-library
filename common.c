@@ -1,7 +1,7 @@
 /*
  * common.c - shared code for Trinamic drivers
  *
- * v0.0.1 / 2020-02-05 / (c) Io Engineering / Terje
+ * v0.0.2 / 2021-08-05 / (c) Io Engineering / Terje
  */
 
 /*
@@ -38,6 +38,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "common.h"
 
+static uint8_t tmc_motors = 0;
+
 // 1 - 256 in steps of 2^value is valid
 bool tmc_microsteps_validate (uint16_t microsteps)
 {
@@ -69,5 +71,16 @@ uint8_t tmc_microsteps_to_mres (uint16_t microsteps)
 uint32_t tmc_calc_tstep (trinamic_config_t *config, float mm_sec, float steps_mm)
 {
     uint32_t den = (uint32_t)(256.0f * mm_sec * steps_mm);
+
     return den ? (config->microsteps * config->f_clk) / den : 0;
+}
+
+void tmc_motors_set (uint8_t motors)
+{
+    tmc_motors = motors;
+}
+
+uint8_t tmc_motors_get (void)
+{
+    return tmc_motors;
 }

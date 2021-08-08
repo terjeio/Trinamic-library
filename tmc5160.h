@@ -1,7 +1,7 @@
 /*
  * tmc5160.h - register and message (datagram) descriptors for Trinamic TMC5160 stepper driver
  *
- * v0.0.1 / 2021-01-04 / (c) Io Engineering / Terje
+ * v0.0.2 / 2021-08-05 / (c) Io Engineering / Terje
  */
 
 /*
@@ -60,90 +60,86 @@ typedef enum {
 // default values
 
 // General
-#define TMC5160_F_CLK 12000000UL    // typical value @ 50C for internal osc - see datasheet for calibration procedure if required
-#define TMC5160_MICROSTEPS TMC5160_Microsteps_4
-#define TMC5160_R_SENSE 75          // mOhm
-#define TMC5160_CURRENT 500         // mA RMS
-#define TMC5160_HOLD_CURRENT_PCT 50
+#define TMC5160_F_CLK               12000000UL  // typical value @ 50C for internal osc - see datasheet for calibration procedure if required
+#define TMC5160_MODE                0           // 0 = TMCMode_StealthChop, 1 = TMCMode_CoolStep, 3 = TMCMode_StallGuard
+#define TMC5160_MICROSTEPS          TMC5160_Microsteps_4
+#define TMC5160_R_SENSE             75          // mOhm
+#define TMC5160_CURRENT             500         // mA RMS
+#define TMC5160_HOLD_CURRENT_PCT    50
 
 // CHOPCONF
-#define TMC5160_INTERPOLATE 1       // intpol: 0 = off, 1 = on
-#define TMC5160_CONSTANT_OFF_TIME 5 // toff: 1 - 15
-#define TMC5160_BLANK_TIME 1        // tbl: 0 = 16, 1 = 24, 2 = 36, 3 = 54 clocks
-#define TMC5160_CHOPPER_MODE 0      // chm: 0 = spreadCycle, 1 = constant off time
+#define TMC5160_INTERPOLATE         1   // intpol: 0 = off, 1 = on
+#define TMC5160_CONSTANT_OFF_TIME   5   // toff: 1 - 15
+#define TMC5160_BLANK_TIME          1   // tbl: 0 = 16, 1 = 24, 2 = 36, 3 = 54 clocks
+#define TMC5160_CHOPPER_MODE        0   // chm: 0 = spreadCycle, 1 = constant off time
 // TMC5160_CHOPPER_MODE 0 defaults
-#define TMC5160_HSTRT 3             // hstrt: 0 � 7
-#define TMC5160_HEND 2              // hend: -3 � 12
+#define TMC5160_HSTRT               3   // hstrt: 0 - 7
+#define TMC5160_HEND                2   // hend: -3 - 12
 // TMC5160_CHOPPER_MODE 1 defaults
-#define TMC5160_FAST_DECAY_TIME 13  // fd3 & hstrt: 0 - 15
-#define TMC5160_SINE_WAVE_OFFSET 2  // hend: -3 � 12
+#define TMC5160_FAST_DECAY_TIME     13  // fd3 & hstrt: 0 - 15
+#define TMC5160_SINE_WAVE_OFFSET    2   // hend: -3 - 12
 
 // IHOLD_IRUN
-#define TMC5160_IRUN 31             // max. current
-#define TMC5160_IHOLD ((TMC5160_IRUN * TMC5160_HOLD_CURRENT_PCT) / 100)
-#define TMC5160_IHOLDDELAY 6
+#define TMC5160_IRUN                31  // max. current
+#define TMC5160_IHOLD               ((TMC5160_IRUN * TMC5160_HOLD_CURRENT_PCT) / 100)
+#define TMC5160_IHOLDDELAY          6
 
 // TPOWERDOWN
-#define TMC5160_TPOWERDOWN 128      // 0 � ((2^8)-1) * 2^18 tCLK
-
-// EN_PWM_MODE
-#define TMC5160_EN_PWM_MODE 1       // en_pwm_ mode: 0 = stealthChop off, 1 = stealthChop on
+#define TMC5160_TPOWERDOWN          128 // 0 - ((2^8)-1) * 2^18 tCLK
 
 // TPWMTHRS
-#define TMC5160_TPWM_THRS 0         // tpwmthrs: 0 � 2^20 - 1 (20 bits)
+#define TMC5160_TPWM_THRS           0   // tpwmthrs: 0 - 2^20 - 1 (20 bits)
 
 // COOLCONF
-#define TMC5160_COOLSTEP_ENABLE 0
-// TMC5160_COOLSTEP_ENABLE = 1 defaults
-#define TMC5160_COOLSTEP_SEMIN 1    // semin: 0 = coolStep off, 1 � 15 = coolStep on
-#define TMC5160_COOLSTEP_SEMAX 1    // semax: 0 � 15
+#define TMC5160_COOLSTEP_SEMIN      1    // semin: 0 = coolStep off, 1 - 15 = coolStep on
+#define TMC5160_COOLSTEP_SEMAX      1    // semax: 0 - 15
 
 // end of default values
 
 typedef enum {
-    TMC5160Reg_GCONF = 0x00,
-    TMC5160Reg_GSTAT = 0x01,
-    TMC5160Reg_IFCNT = 0x02,
-    TMC5160Reg_SLAVECONF = 0x03,
-    TMC5160Reg_IOIN = 0x04,
+    TMC5160Reg_GCONF            = 0x00,
+    TMC5160Reg_GSTAT            = 0x01,
+    TMC5160Reg_IFCNT            = 0x02,
+    TMC5160Reg_SLAVECONF        = 0x03,
+    TMC5160Reg_IOIN             = 0x04,
 
-    TMC5160Reg_OUTPUT = 0x05,
-    TMC5160Reg_X_COMPARE = 0x06,
-    TMC5160Reg_OTP_READ = 0x07,
-    TMC5160Reg_FACTORY_CONF = 0x08,
-    TMC5160Reg_SHORT_CONF = 0x09,
-    TMC5160Reg_DRV_CONF = 0x0A,
-    TMC5160Reg_GLOBAL_SCALER = 0x0B,
-    TMC5160Reg_OFFSET_READ = 0x0C,
+    TMC5160Reg_OUTPUT           = 0x05,
+    TMC5160Reg_X_COMPARE        = 0x06,
+    TMC5160Reg_OTP_READ         = 0x07,
+    TMC5160Reg_FACTORY_CONF     = 0x08,
+    TMC5160Reg_SHORT_CONF       = 0x09,
+    TMC5160Reg_DRV_CONF         = 0x0A,
+    TMC5160Reg_GLOBAL_SCALER    = 0x0B,
+    TMC5160Reg_OFFSET_READ      = 0x0C,
 
-    TMC5160Reg_IHOLD_IRUN = 0x10,
-    TMC5160Reg_TPOWERDOWN = 0x11,
-    TMC5160Reg_TSTEP = 0x12,
-    TMC5160Reg_TPWMTHRS = 0x13,
-    TMC5160Reg_TCOOLTHRS = 0x14,
-    TMC5160Reg_THIGH = 0x15,
+    TMC5160Reg_IHOLD_IRUN       = 0x10,
+    TMC5160Reg_TPOWERDOWN       = 0x11,
+    TMC5160Reg_TSTEP            = 0x12,
+    TMC5160Reg_TPWMTHRS         = 0x13,
+    TMC5160Reg_TCOOLTHRS        = 0x14,
+    TMC5160Reg_THIGH            = 0x15,
 
-    TMC5160Reg_XDIRECT = 0x2D,
+    TMC5160Reg_XDIRECT          = 0x2D,
 
-    TMC5160Reg_VDCMIN = 0x33,
-    TMC5160Reg_SW_MODE = 0x34,
-    TMC5160Reg_RAMP_STAT = 0x35,
-    TMC5160Reg_XLATCH = 0x36,
+    TMC5160Reg_VDCMIN           = 0x33,
+    TMC5160Reg_SW_MODE          = 0x34,
+    TMC5160Reg_RAMP_STAT        = 0x35,
+    TMC5160Reg_XLATCH           = 0x36,
 
 
-    TMC5160Reg_MSLUT_BASE = 0x60,
-    TMC5160Reg_MSLUTSEL = 0x68,
-    TMC5160Reg_MSLUTSTART = 0x69,
-    TMC5160Reg_MSCNT = 0x6A,
-    TMC5160Reg_MSCURACT = 0x6B,
-    TMC5160Reg_CHOPCONF = 0x6C,
-    TMC5160Reg_COOLCONF = 0x6D,
-    TMC5160Reg_DCCTRL = 0x6E,
-    TMC5160Reg_DRV_STATUS = 0x6F,
-    TMC5160Reg_PWMCONF = 0x70,
-    TMC5160Reg_PWM_SCALE = 0x71,
-    TMC5160Reg_PWM_AUTO = 0x72,
-    TMC5160Reg_LOST_STEPS = 0x73,
+    TMC5160Reg_MSLUT_BASE       = 0x60,
+    TMC5160Reg_MSLUTSEL         = 0x68,
+    TMC5160Reg_MSLUTSTART       = 0x69,
+    TMC5160Reg_MSCNT            = 0x6A,
+    TMC5160Reg_MSCURACT         = 0x6B,
+    TMC5160Reg_CHOPCONF         = 0x6C,
+    TMC5160Reg_COOLCONF         = 0x6D,
+    TMC5160Reg_DCCTRL           = 0x6E,
+    TMC5160Reg_DRV_STATUS       = 0x6F,
+    TMC5160Reg_PWMCONF          = 0x70,
+    TMC5160Reg_PWM_SCALE        = 0x71,
+    TMC5160Reg_PWM_AUTO         = 0x72,
+    TMC5160Reg_LOST_STEPS       = 0x73,
 } tmc5160_regaddr_t;
 
 typedef union {
@@ -808,7 +804,6 @@ typedef struct {
     TMC5160_lost_steps_dgr_t lost_steps;
     TMC5160_status_t driver_status;
 
-    trinamic_motor_t motor;
     trinamic_config_t config;
 } TMC5160_t;
 
@@ -818,10 +813,10 @@ bool TMC5160_Init(TMC5160_t *driver);
 void TMC5160_SetDefaults (TMC5160_t *driver);
 void TMC5160_SetCurrent (TMC5160_t *driver, uint16_t mA, uint8_t hold_pct);
 uint16_t TMC5160_GetCurrent (TMC5160_t *driver);
-uint32_t TMC5160_GetTPWMTHRS (TMC5160_t *driver, float steps_mm);
 bool TMC5160_MicrostepsIsValid (uint16_t usteps);
 void TMC5160_SetMicrosteps(TMC5160_t *driver, tmc5160_microsteps_t usteps);
-void TMC5160_SetHybridThreshold (TMC5160_t *driver, float mm_sec, float steps_mm);
+float TMC5160_GetTPWMTHRS (TMC5160_t *driver, float steps_mm);
+void TMC5160_SetTPWMTHRS (TMC5160_t *driver, float mm_sec, float steps_mm);
 void TMC5160_SetTHIGH (TMC5160_t *driver, float mm_sec, float steps_mm);
 void TMC5160_SetTCOOLTHRS (TMC5160_t *driver, float mm_sec, float steps_mm);
 

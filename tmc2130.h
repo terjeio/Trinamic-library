@@ -1,7 +1,7 @@
 /*
  * tmc2130.h - register and message (datagram) descriptors for Trinamic TMC2130 stepper driver
  *
- * v0.0.5 / 2020-01-05 / (c) Io Engineering / Terje
+ * v0.0.6 / 2021-08-05 / (c) Io Engineering / Terje
  */
 
 /*
@@ -63,78 +63,74 @@ typedef enum {
 // default values
 
 // General
-#define TMC2130_F_CLK 13200000UL    // typical value @ 50C for internal osc - see datasheet for calibration procedure if required
-#define TMC2130_MICROSTEPS TMC2130_Microsteps_4
-#define TMC2130_R_SENSE 110         // mOhm
-#define TMC2130_CURRENT 500         // mA RMS
-#define TMC2130_HOLD_CURRENT_PCT 50
+#define TMC2130_F_CLK               13200000UL  // typical value @ 50C for internal osc - see datasheet for calibration procedure if required
+#define TMC2130_MODE                0           // 0 = TMCMode_StealthChop, 1 = TMCMode_CoolStep, 3 = TMCMode_StallGuard
+#define TMC2130_MICROSTEPS          TMC2130_Microsteps_4
+#define TMC2130_R_SENSE             110         // mOhm
+#define TMC2130_CURRENT             500         // mA RMS
+#define TMC2130_HOLD_CURRENT_PCT    50
 
 // CHOPCONF
-#define TMC2130_INTERPOLATE 1       // intpol: 0 = off, 1 = on
-#define TMC2130_CONSTANT_OFF_TIME 5 // toff: 1 - 15
-#define TMC2130_BLANK_TIME 1        // tbl: 0 = 16, 1 = 24, 2 = 36, 3 = 54 clocks
-#define TMC2130_RANDOM_TOFF 1       // rndtf: 0 = fixed, 1 = random
-#define TMC2130_CHOPPER_MODE 0      // chm: 0 = spreadCycle, 1 = constant off time
+#define TMC2130_INTERPOLATE         1   // intpol: 0 = off, 1 = on
+#define TMC2130_CONSTANT_OFF_TIME   5   // toff: 1 - 15
+#define TMC2130_BLANK_TIME          1   // tbl: 0 = 16, 1 = 24, 2 = 36, 3 = 54 clocks
+#define TMC2130_RANDOM_TOFF         1   // rndtf: 0 = fixed, 1 = random
+#define TMC2130_CHOPPER_MODE        0   // chm: 0 = spreadCycle, 1 = constant off time
 // TMC2130_CHOPPER_MODE 0 defaults
-#define TMC2130_HSTRT 3             // hstrt: 0 � 7
-#define TMC2130_HEND 2              // hend: -3 � 12
+#define TMC2130_HSTRT               3   // hstrt: 0 - 7
+#define TMC2130_HEND                2   // hend: -3- 12
 // TMC2130_CHOPPER_MODE 1 defaults
-#define TMC2130_FAST_DECAY_TIME 13  // fd3 & hstrt: 0 - 15
-#define TMC2130_SINE_WAVE_OFFSET 2  // hend: -3 � 12
+#define TMC2130_FAST_DECAY_TIME     13  // fd3 & hstrt: 0 - 15
+#define TMC2130_SINE_WAVE_OFFSET    2   // hend: -3 - 12
 
 // IHOLD_IRUN
-#define TMC2130_IRUN 31             // max. current
-#define TMC2130_IHOLD ((TMC2130_IRUN * TMC2130_HOLD_CURRENT_PCT) / 100)
-#define TMC2130_IHOLDDELAY 6
+#define TMC2130_IRUN                31  // max. current
+#define TMC2130_IHOLD               ((TMC2130_IRUN * TMC2130_HOLD_CURRENT_PCT) / 100)
+#define TMC2130_IHOLDDELAY          6
 
 // TPOWERDOWN
-#define TMC2130_TPOWERDOWN 128      // 0 � ((2^8)-1) * 2^18 tCLK
-
-// EN_PWM_MODE
-#define TMC2130_EN_PWM_MODE 1       // en_pwm_ mode: 0 = stealthChop off, 1 = stealthChop on
+#define TMC2130_TPOWERDOWN          128 // 0 - ((2^8)-1) * 2^18 tCLK
 
 // TPWMTHRS
-#define TMC2130_TPWM_THRS 0         // tpwmthrs: 0 � 2^20 - 1 (20 bits)
+#define TMC2130_TPWM_THRS           0   // tpwmthrs: 0 - 2^20 - 1 (20 bits)
 
-// PWM_CONF
-#define TMC2130_PWM_AUTOSCALE 1     // pwm_autoscale: 0 = forward controlled mode, 1 = automatic scaling
-#define TMC2130_PWM_FREQ 1          // pwm_freq: 0 = 1/1024, 1 = 2/683, 2 = 2/512, 3 = 2/410 fCLK
-#define TMC2130_PWM_AMPL 255        // pwm_ampl: 0 � 255
-#define TMC2130_PWM_GRAD 5          // pwm_autoscale = 1: 1 � 15, pwm_autoscale = 0: 0 � 255
+// PWM_CONF - TMC2130_MODE == TMCMode_StealthChop defaults
+#define TMC2130_PWM_AUTOSCALE       1   // pwm_autoscale: 0 = forward controlled mode, 1 = automatic scaling
+#define TMC2130_PWM_FREQ            1   // pwm_freq: 0 = 1/1024, 1 = 2/683, 2 = 2/512, 3 = 2/410 fCLK
+#define TMC2130_PWM_AMPL            255 // pwm_ampl: 0 - 255
+#define TMC2130_PWM_GRAD            5   // pwm_autoscale = 1: 1 - 15, pwm_autoscale = 0: 0 - 255
 
-// COOLCONF
-#define TMC2130_COOLSTEP_ENABLE 0
-// TMC2130_COOLSTEP_ENABLE = 1 defaults
-#define TMC2130_COOLSTEP_SEMIN 1    // semin: 0 = coolStep off, 1 � 15 = coolStep on
-#define TMC2130_COOLSTEP_SEMAX 1    // semax: 0 � 15
+// COOLCONF - TMC2130_MODE == TMCMode_CoolStep defaults
+#define TMC2130_COOLSTEP_SEMIN      1    // semin: 0 = coolStep off, 1 - 15 = coolStep on
+#define TMC2130_COOLSTEP_SEMAX      1    // semax: 0 - 15
 
 // end of default values
 
 typedef enum {
-    TMC2130Reg_GCONF = 0x00,
-    TMC2130Reg_GSTAT = 0x01,
-    TMC2130Reg_IOIN = 0x04,
-    TMC2130Reg_IHOLD_IRUN = 0x10,
-    TMC2130Reg_TPOWERDOWN = 0x11,
-    TMC2130Reg_TSTEP = 0x12,
-    TMC2130Reg_TPWMTHRS = 0x13,
-    TMC2130Reg_TCOOLTHRS = 0x14,
-    TMC2130Reg_THIGH = 0x15,
-    TMC2130Reg_XDIRECT = 0x2D,
-    TMC2130Reg_VDCMIN = 0x33,
-    TMC2130Reg_MSLUT_BASE = 0x60,
-    TMC2130Reg_MSLUTSEL = 0x68,
-    TMC2130Reg_MSLUTSTART = 0x69,
-    TMC2130Reg_MSCNT = 0x6A,
-    TMC2130Reg_MSCURACT = 0x6B,
-    TMC2130Reg_CHOPCONF = 0x6C,
-    TMC2130Reg_COOLCONF = 0x6D,
-    TMC2130Reg_DCCTRL = 0x6E,
-    TMC2130Reg_DRV_STATUS = 0x6F,
-    TMC2130Reg_PWMCONF = 0x70,
-    TMC2130Reg_PWM_SCALE = 0x71,
-    TMC2130Reg_ENCM_CTRL = 0x72,
-    TMC2130Reg_LOST_STEPS = 0x73,
+    TMC2130Reg_GCONF        = 0x00,
+    TMC2130Reg_GSTAT        = 0x01,
+    TMC2130Reg_IOIN         = 0x04,
+    TMC2130Reg_IHOLD_IRUN   = 0x10,
+    TMC2130Reg_TPOWERDOWN   = 0x11,
+    TMC2130Reg_TSTEP        = 0x12,
+    TMC2130Reg_TPWMTHRS     = 0x13,
+    TMC2130Reg_TCOOLTHRS    = 0x14,
+    TMC2130Reg_THIGH        = 0x15,
+    TMC2130Reg_XDIRECT      = 0x2D,
+    TMC2130Reg_VDCMIN       = 0x33,
+    TMC2130Reg_MSLUT_BASE   = 0x60,
+    TMC2130Reg_MSLUTSEL     = 0x68,
+    TMC2130Reg_MSLUTSTART   = 0x69,
+    TMC2130Reg_MSCNT        = 0x6A,
+    TMC2130Reg_MSCURACT     = 0x6B,
+    TMC2130Reg_CHOPCONF     = 0x6C,
+    TMC2130Reg_COOLCONF     = 0x6D,
+    TMC2130Reg_DCCTRL       = 0x6E,
+    TMC2130Reg_DRV_STATUS   = 0x6F,
+    TMC2130Reg_PWMCONF      = 0x70,
+    TMC2130Reg_PWM_SCALE    = 0x71,
+    TMC2130Reg_ENCM_CTRL    = 0x72,
+    TMC2130Reg_LOST_STEPS   = 0x73,
 } tmc2130_regaddr_t;
 
 typedef union {
@@ -681,7 +677,6 @@ typedef struct {
     TMC2130_lost_steps_dgr_t lost_steps;
     TMC2130_status_t driver_status;
 
-    trinamic_motor_t motor;
     trinamic_config_t config;
 } TMC2130_t;
 
@@ -691,10 +686,10 @@ bool TMC2130_Init(TMC2130_t *driver);
 void TMC2130_SetDefaults (TMC2130_t *driver);
 void TMC2130_SetCurrent (TMC2130_t *driver, uint16_t mA, uint8_t hold_pct);
 uint16_t TMC2130_GetCurrent (TMC2130_t *driver);
-uint32_t TMC2130_GetTPWMTHRS (TMC2130_t *driver, float stpmm);
+void TMC2130_SetTPWMTHRS (TMC2130_t *driver, float mm_sec, float steps_mm);
+float TMC2130_GetTPWMTHRS (TMC2130_t *driver, float steps_mm);
 bool TMC2130_MicrostepsIsValid (uint16_t usteps);
-void TMC2130_SetMicrosteps(TMC2130_t *driver, tmc2130_microsteps_t usteps);
-void TMC2130_SetHybridThreshold (TMC2130_t *driver, uint32_t threshold, float steps_mm);
+void TMC2130_SetMicrosteps(TMC2130_t *driver, tmc2130_microsteps_t steps_mm);
 void TMC2130_SetTHIGH (TMC2130_t *driver, float mm_sec, float steps_mm);
 void TMC2130_SetTCOOLTHRS (TMC2130_t *driver, float mm_sec, float steps_mm);
 void TMC2130_SetConstantOffTimeChopper(TMC2130_t *driver, uint8_t constant_off_time, uint8_t blank_time, uint8_t fast_decay_time, int8_t sine_wave_offset, bool use_current_comparator);
