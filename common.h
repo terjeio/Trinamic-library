@@ -1,7 +1,7 @@
 /*
  * common.h - shared code for Trinamic drivers
  *
- * v0.0.1 / 2020-02-04 / (c) Io Engineering / Terje
+ * v0.0.2 / 2021-08-05 / (c) Io Engineering / Terje
  */
 
 /*
@@ -41,9 +41,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <stdint.h>
 #include <stdbool.h>
 
+#define N_TMC_MOTORS 6  // max number of Trinamic drivers
+
 typedef struct {
-    uint8_t axis; // axis index
-    void *cs_pin; // the CS pin for the stepper driver
+    uint8_t id;     // motor id
+    uint8_t axis;   // axis index
+    void *cs_pin;   // the CS pin for the stepper driver
 } trinamic_motor_t;
 
 typedef enum {
@@ -52,14 +55,20 @@ typedef enum {
     TMC5160
 } trinamic_driver_t;
 
+typedef enum {
+   TMCMode_StealthChop = 0,
+   TMCMode_CoolStep,
+   TMCMode_StallGuard,
+} trinamic_mode_t;
+
 typedef struct {
     uint32_t f_clk;
     uint16_t microsteps;
     uint16_t r_sense;           // mOhm
     uint16_t current;           // mA
     uint8_t hold_current_pct;   // percent
-    uint8_t addr;
-    bool cool_step_enabled;
+    trinamic_mode_t mode;
+    trinamic_motor_t motor;
 } trinamic_config_t;
 
 #pragma pack(push, 1)
@@ -117,6 +126,8 @@ typedef uint8_t TMC_spi_status_t;
 bool tmc_microsteps_validate (uint16_t microsteps);
 uint8_t tmc_microsteps_to_mres (uint16_t microsteps);
 uint32_t tmc_calc_tstep (trinamic_config_t *config, float mm_sec, float steps_mm);
+void tmc_motors_set (uint8_t motors);
+uint8_t tmc_motors_get (void);
 
 extern TMC_spi_status_t tmc_spi_write (trinamic_motor_t driver, TMC_spi_datagram_t *datagram);
 extern TMC_spi_status_t tmc_spi_read (trinamic_motor_t driver, TMC_spi_datagram_t *datagram);

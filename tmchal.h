@@ -1,7 +1,7 @@
 /*
  * tmchal.h - HAL interface for Trinamic stepper drivers
  *
- * v0.0.1 / 2021-02-04 / (c) Io Engineering / Terje
+ * v0.0.2 / 2021-08-05 / (c) Io Engineering / Terje
  */
 
 /*
@@ -84,39 +84,44 @@ typedef union {
     };
 } TMC_drv_status_t;
 
-typedef trinamic_config_t *(*tmc_get_config)(uint8_t axis);
+typedef trinamic_config_t *(*tmc_get_config)(uint8_t motor);
 
-typedef bool (*tmc_microsteps_isvalid)(uint8_t axis, uint16_t microsteps);
-typedef void (*tmc_set_microsteps)(uint8_t axis, uint16_t microsteps);
-typedef void (*tmc_set_current)(uint8_t axis, uint16_t mA, uint8_t hold_pct);
-typedef uint16_t (*tmc_get_current)(uint8_t axis);
-typedef TMC_chopconf_t (*tmc_get_chopconf)(uint8_t axis);
-typedef uint32_t (*tmc_get_tstep)(uint8_t axis);
-typedef TMC_drv_status_t (*tmc_get_drv_status)(uint8_t axis);
-typedef uint32_t (*tmc_get_drv_status_raw)(uint8_t axis);
-typedef void (*tmc_set_tcoolthrs)(uint8_t axis, float mm_sec, float steps_mm);
-typedef void (*tmc_set_tcoolthrs_raw)(uint8_t axis, uint32_t value);
-typedef void (*tmc_set_thigh)(uint8_t axis, float mm_sec, float steps_mm);
-typedef void (*tmc_set_thigh_raw)(uint8_t axis, uint32_t value);
-typedef void (*tmc_stallguard_enable)(uint8_t axis, bool on, uint8_t sensitivity);
-typedef uint32_t (*tmc_get_tpwmthrs_raw)(uint8_t axis);
-typedef uint32_t (*tmc_get_tpwmthrs)(uint8_t axis, float steps_mm);
-typedef uint8_t (*tmc_get_global_scaler)(uint8_t axis);
-typedef bool (*tmc_get_en_pwm_mode)(uint8_t axis);
-typedef TMC_ihold_irun_t (*tmc_get_ihold_irun)(uint8_t axis);
-
-typedef void (*tmc_stealthChop)(uint8_t axis, bool on);
-typedef void (*tmc_sg_filter)(uint8_t axis, bool on);
-typedef void (*tmc_sg_stall_value)(uint8_t axis, uint8_t val);
-typedef uint8_t (*tmc_get_sg_stall_value)(uint8_t axis);
-typedef void (*tmc_sedn)(uint8_t axis, uint8_t val);
-typedef void (*tmc_semin)(uint8_t axis, uint8_t val);
-typedef void (*tmc_semax)(uint8_t axis, uint8_t val);
-typedef void (*tmc_toff)(uint8_t axis, uint8_t val);
-typedef void (*tmc_tbl)(uint8_t axis, uint8_t val);
-typedef void (*tmc_chopper_mode)(uint8_t axis, uint8_t val);
-typedef void (*tmc_hysteresis_start)(uint8_t axis, uint8_t val);
-typedef void (*tmc_hysteresis_end)(uint8_t axis, int8_t val);
+typedef bool (*tmc_microsteps_isvalid)(uint8_t motor, uint16_t microsteps);
+typedef void (*tmc_set_microsteps)(uint8_t motor, uint16_t microsteps);
+typedef void (*tmc_set_current)(uint8_t motor, uint16_t mA, uint8_t hold_pct);
+typedef uint16_t (*tmc_get_current)(uint8_t motor);
+typedef TMC_chopconf_t (*tmc_get_chopconf)(uint8_t motor);
+typedef uint32_t (*tmc_get_tstep)(uint8_t motor);
+typedef TMC_drv_status_t (*tmc_get_drv_status)(uint8_t motor);
+typedef uint32_t (*tmc_get_drv_status_raw)(uint8_t motor);
+typedef void (*tmc_set_tcoolthrs)(uint8_t motor, float mm_sec, float steps_mm);
+typedef void (*tmc_set_tcoolthrs_raw)(uint8_t motor, uint32_t value);
+typedef void (*tmc_set_thigh)(uint8_t motor, float mm_sec, float steps_mm);
+typedef void (*tmc_set_thigh_raw)(uint8_t motor, uint32_t value);
+typedef void (*tmc_stallguard_enable)(uint8_t motor, float feed_rate, float steps_mm, uint8_t sensitivity);
+typedef void (*tmc_stealthchop_enable)(uint8_t motor);
+typedef uint32_t (*tmc_get_sg_result)(uint8_t motor);
+typedef void (*tmc_coolstep_enable)(uint8_t motor);
+typedef uint32_t (*tmc_get_tpwmthrs_raw)(uint8_t motor);
+typedef float (*tmc_get_tpwmthrs)(uint8_t motor, float steps_mm);
+typedef void (*tmc_set_tpwmthrs)(uint8_t motor, float mm_sec, float steps_mm);
+typedef uint8_t (*tmc_get_global_scaler)(uint8_t motor);
+typedef bool (*tmc_get_en_pwm_mode)(uint8_t motor);
+typedef TMC_ihold_irun_t (*tmc_get_ihold_irun)(uint8_t motor);
+typedef void (*tmc_stealthChop)(uint8_t motor, bool on);
+typedef void (*tmc_sg_filter)(uint8_t motor, bool on);
+typedef void (*tmc_sg_stall_value)(uint8_t motor, uint8_t val);
+typedef uint8_t (*tmc_get_sg_stall_value)(uint8_t motor);
+typedef uint8_t (*tmc_pwm_scale)(uint8_t motor);
+typedef bool (*tmc_vsense)(uint8_t motor);
+typedef void (*tmc_sedn)(uint8_t motor, uint8_t val);
+typedef void (*tmc_semin)(uint8_t motor, uint8_t val);
+typedef void (*tmc_semax)(uint8_t motor, uint8_t val);
+typedef void (*tmc_toff)(uint8_t motor, uint8_t val);
+typedef void (*tmc_tbl)(uint8_t motor, uint8_t val);
+typedef void (*tmc_chopper_mode)(uint8_t motor, uint8_t val);
+typedef void (*tmc_hysteresis_start)(uint8_t motor, uint8_t val);
+typedef void (*tmc_hysteresis_end)(uint8_t motor, int8_t val);
 
 typedef struct {
     const char *name;
@@ -136,9 +141,13 @@ typedef struct {
     tmc_set_tcoolthrs_raw set_tcoolthrs_raw;
     tmc_set_thigh set_thigh;
     tmc_set_thigh_raw set_thigh_raw;
+    tmc_get_sg_result get_sg_result;
     tmc_stallguard_enable stallguard_enable;
+    tmc_stealthchop_enable stealthchop_enable;
+    tmc_coolstep_enable coolstep_enable;
     tmc_get_tpwmthrs_raw get_tpwmthrs_raw;
     tmc_get_tpwmthrs get_tpwmthrs;
+    tmc_set_tpwmthrs set_tpwmthrs;
     tmc_get_global_scaler get_global_scaler;
     tmc_get_en_pwm_mode get_en_pwm_mode;
     tmc_get_ihold_irun get_ihold_irun;
@@ -152,6 +161,8 @@ typedef struct {
     tmc_semax semax;
     tmc_toff toff;
     tmc_tbl tbl;
+    tmc_vsense vsense;
+    tmc_pwm_scale pwm_scale;
     tmc_chopper_mode chopper_mode;
     tmc_hysteresis_start hysteresis_start;
     tmc_hysteresis_end hysteresis_end;

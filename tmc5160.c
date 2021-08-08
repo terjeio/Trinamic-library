@@ -1,7 +1,7 @@
 /*
  * tmc5160.c - interface for Trinamic TMC5160 stepper driver
  *
- * v0.0.2 / 2021-02-04 / (c) Io Engineering / Terje
+ * v0.0.2 / 2021-08-05 / (c) Io Engineering / Terje
  */
 
 /*
@@ -48,7 +48,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 static const TMC5160_t tmc5160_defaults = {
     .config.f_clk = TMC5160_F_CLK,
-    .config.cool_step_enabled = TMC5160_COOLSTEP_ENABLE,
+    .config.mode = TMC5160_MODE,
     .config.r_sense = TMC5160_R_SENSE,
     .config.current = TMC5160_CURRENT,
     .config.hold_current_pct = TMC5160_HOLD_CURRENT_PCT,
@@ -90,10 +90,8 @@ static const TMC5160_t tmc5160_defaults = {
     .encm_ctrl.addr.reg = TMC5160Reg_ENCM_CTRL,
 #endif
 
-#if TMC5160_COOLSTEP_ENABLE
     .coolconf.reg.semin = TMC5160_COOLSTEP_SEMIN,
     .coolconf.reg.semax = TMC5160_COOLSTEP_SEMAX,
-#endif
 
     .chopconf.reg.intpol = TMC5160_INTERPOLATE,
     .chopconf.reg.toff = TMC5160_CONSTANT_OFF_TIME,
@@ -114,9 +112,8 @@ static const TMC5160_t tmc5160_defaults = {
 
     .tpowerdown.reg.tpowerdown = TMC5160_TPOWERDOWN,
 
-    .gconf.reg.en_pwm_mode = TMC5160_EN_PWM_MODE,
-
-#if TMC5160_EN_PWM_MODE == 1 // stealthChop
+#if TMC5160_MODE == 0 // stealthChop
+    .gconf.reg.en_pwm_mode = true,
     .pwmconf.reg.pwm_lim = 12,
     .pwmconf.reg.pwm_reg = 8,
     .pwmconf.reg.pwm_autograd = true,
@@ -124,6 +121,8 @@ static const TMC5160_t tmc5160_defaults = {
     .pwmconf.reg.pwm_freq = 0b01,
     .pwmconf.reg.pwm_grad = 14,
     .pwmconf.reg.pwm_ofs = 36,
+#else
+    .gconf.reg.en_pwm_mode = false,
 #endif
 
     .tpwmthrs.reg.tpwmthrs = TMC5160_TPWM_THRS
@@ -146,30 +145,30 @@ void TMC5160_SetDefaults (TMC5160_t *driver)
 bool TMC5160_Init (TMC5160_t *driver)
 {
     // Read drv_status to check if driver is online
-    tmc_spi_read(driver->motor, (TMC_spi_datagram_t *)&driver->drv_status);
+    tmc_spi_read(driver->config.motor, (TMC_spi_datagram_t *)&driver->drv_status);
     if(driver->drv_status.reg.value == 0 || driver->drv_status.reg.value == 0xFFFFFFFF)
         return false;
 
     // Perform a status register read to clear reset flag
-    tmc_spi_read(driver->motor, (TMC_spi_datagram_t *)&driver->gstat);
+    tmc_spi_read(driver->config.motor, (TMC_spi_datagram_t *)&driver->gstat);
 
     driver->chopconf.reg.mres = tmc_microsteps_to_mres(driver->config.microsteps);
-    tmc_spi_write(driver->motor, (TMC_spi_datagram_t *)&driver->gconf);
-    tmc_spi_write(driver->motor, (TMC_spi_datagram_t *)&driver->chopconf);
-    tmc_spi_write(driver->motor, (TMC_spi_datagram_t *)&driver->coolconf);
-    tmc_spi_write(driver->motor, (TMC_spi_datagram_t *)&driver->pwmconf);
-    tmc_spi_write(driver->motor, (TMC_spi_datagram_t *)&driver->ihold_irun);
-    tmc_spi_write(driver->motor, (TMC_spi_datagram_t *)&driver->tpowerdown);
-    tmc_spi_write(driver->motor, (TMC_spi_datagram_t *)&driver->tpwmthrs);
+    tmc_spi_write(driver->config.motor, (TMC_spi_datagram_t *)&driver->gconf);
+    tmc_spi_write(driver->config.motor, (TMC_spi_datagram_t *)&driver->chopconf);
+    tmc_spi_write(driver->config.motor, (TMC_spi_datagram_t *)&driver->coolconf);
+    tmc_spi_write(driver->config.motor, (TMC_spi_datagram_t *)&driver->pwmconf);
+    tmc_spi_write(driver->config.motor, (TMC_spi_datagram_t *)&driver->ihold_irun);
+    tmc_spi_write(driver->config.motor, (TMC_spi_datagram_t *)&driver->tpowerdown);
+    tmc_spi_write(driver->config.motor, (TMC_spi_datagram_t *)&driver->tpwmthrs);
 
     TMC5160_SetCurrent(driver, driver->config.current, driver->config.hold_current_pct);
 
     //set to a conservative start value
-    //TMC5160_SetConstantOffTimeChopper(driver->motor, 5, 24, 13, 12, true); // move to default values
+    //TMC5160_SetConstantOffTimeChopper(driver->config.motor, 5, 24, 13, 12, true); // move to default values
 
     // Read back chopconf to check if driver is online
     uint32_t chopconf = driver->chopconf.reg.value;
-    tmc_spi_read(driver->motor, (TMC_spi_datagram_t *)&driver->chopconf);
+    tmc_spi_read(driver->config.motor, (TMC_spi_datagram_t *)&driver->chopconf);
 
     return driver->chopconf.reg.value == chopconf;
 }
@@ -221,31 +220,31 @@ void TMC5160_SetCurrent (TMC5160_t *driver, uint16_t mA, uint8_t hold_pct)
     driver->ihold_irun.reg.irun = CS > 31 ? 31 : CS;
     driver->ihold_irun.reg.ihold = (driver->ihold_irun.reg.irun * driver->config.hold_current_pct) / 100;
 
-    tmc_spi_write(driver->motor, (TMC_spi_datagram_t *)&driver->global_scaler);
-    tmc_spi_write(driver->motor, (TMC_spi_datagram_t *)&driver->ihold_irun);
+    tmc_spi_write(driver->config.motor, (TMC_spi_datagram_t *)&driver->global_scaler);
+    tmc_spi_write(driver->config.motor, (TMC_spi_datagram_t *)&driver->ihold_irun);
 }
 
-uint32_t TMC5160_GetTPWMTHRS (TMC5160_t *driver, float steps_mm)
+float TMC5160_GetTPWMTHRS (TMC5160_t *driver, float steps_mm)
 {
-    return (uint32_t)((driver->config.microsteps * TMC5160_F_CLK) / (256 * driver->tpwmthrs.reg.tpwmthrs * steps_mm));
+    return (float)(driver->config.f_clk * driver->config.microsteps) / (256.0f * (float)driver->tpwmthrs.reg.tpwmthrs * steps_mm);
 }
 
-void TMC5160_SetHybridThreshold (TMC5160_t *driver, float mm_sec, float steps_mm) // -> pwm threshold
+void TMC5160_SetTPWMTHRS (TMC5160_t *driver, float mm_sec, float steps_mm) // -> pwm threshold
 {
     driver->tpwmthrs.reg.tpwmthrs = tmc_calc_tstep(&driver->config, mm_sec, steps_mm);
-    tmc_spi_write(driver->motor, (TMC_spi_datagram_t *)&driver->tpwmthrs);
+    tmc_spi_write(driver->config.motor, (TMC_spi_datagram_t *)&driver->tpwmthrs);
 }
 
 void TMC5160_SetTHIGH (TMC5160_t *driver, float mm_sec, float steps_mm) // -> pwm threshold
 {
     driver->thigh.reg.thigh = tmc_calc_tstep(&driver->config, mm_sec, steps_mm);
-    tmc_spi_write(driver->motor, (TMC_spi_datagram_t *)&driver->thigh);
+    tmc_spi_write(driver->config.motor, (TMC_spi_datagram_t *)&driver->thigh);
 }
 
 void TMC5160_SetTCOOLTHRS (TMC5160_t *driver, float mm_sec, float steps_mm) // -> pwm threshold
 {
     driver->tcoolthrs.reg.tcoolthrs = tmc_calc_tstep(&driver->config, mm_sec, steps_mm);
-    tmc_spi_write(driver->motor, (TMC_spi_datagram_t *)&driver->tcoolthrs);
+    tmc_spi_write(driver->config.motor, (TMC_spi_datagram_t *)&driver->tcoolthrs);
 }
 
 // 1 - 256 in steps of 2^value is valid for TMC5160
@@ -259,7 +258,7 @@ void TMC5160_SetMicrosteps (TMC5160_t *driver, tmc5160_microsteps_t msteps)
     driver->chopconf.reg.mres = tmc_microsteps_to_mres(msteps);
     driver->config.microsteps = (tmc5160_microsteps_t)(1 << (8 - driver->chopconf.reg.mres));
 // TODO: recalc and set hybrid threshold if enabled?
-    tmc_spi_write(driver->motor, (TMC_spi_datagram_t *)&driver->chopconf);
+    tmc_spi_write(driver->config.motor, (TMC_spi_datagram_t *)&driver->chopconf);
 }
 
 void TMC5160_SetConstantOffTimeChopper (TMC5160_t *driver, uint8_t constant_off_time, uint8_t blank_time, uint8_t fast_decay_time, int8_t sine_wave_offset, bool use_current_comparator)
@@ -283,14 +282,14 @@ void TMC5160_SetConstantOffTimeChopper (TMC5160_t *driver, uint8_t constant_off_
     driver->chopconf.reg.toff = constant_off_time < 2 ? 2 : (constant_off_time > 15 ? 15 : constant_off_time);
     driver->chopconf.reg.hend = (sine_wave_offset < -3 ? -3 : (sine_wave_offset > 12 ? 12 : sine_wave_offset)) + 3;
 
-    tmc_spi_write(driver->motor, (TMC_spi_datagram_t *)&driver->chopconf);
+    tmc_spi_write(driver->config.motor, (TMC_spi_datagram_t *)&driver->chopconf);
 }
 
 TMC5160_status_t TMC5160_WriteRegister (TMC5160_t *driver, TMC5160_datagram_t *reg)
 {
     TMC5160_status_t status;
 
-    status.value = tmc_spi_write(driver->motor, (TMC_spi_datagram_t *)reg);
+    status.value = tmc_spi_write(driver->config.motor, (TMC_spi_datagram_t *)reg);
 
     return status;
 }
@@ -299,7 +298,7 @@ TMC5160_status_t TMC5160_ReadRegister (TMC5160_t *driver, TMC5160_datagram_t *re
 {
     TMC5160_status_t status;
 
-    status.value = tmc_spi_read(driver->motor, (TMC_spi_datagram_t *)reg);
+    status.value = tmc_spi_read(driver->config.motor, (TMC_spi_datagram_t *)reg);
 
     return status;
 }

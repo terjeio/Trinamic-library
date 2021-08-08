@@ -1,7 +1,7 @@
 /*
  * tmc2130hal.c - interface for Trinamic TMC2130 stepper driver
  *
- * v0.0.1 / 2021-02-07 / (c) Io Engineering / Terje
+ * v0.0.2 / 2021-08-05 / (c) Io Engineering / Terje
  */
 
 /*
@@ -39,255 +39,307 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <stdlib.h>
 #include <string.h>
 
+#include "grbl\hal.h"
+
 #include "tmc2130.h"
 #include "tmchal.h"
 
 static TMC2130_t *tmcdriver[6];
 
-static trinamic_config_t *getConfig (uint8_t axis)
+static trinamic_config_t *getConfig (uint8_t motor)
 {
-    return &tmcdriver[axis]->config;
+    return &tmcdriver[motor]->config;
 }
 
-static bool MicrostepsIsValid (uint8_t axis, uint16_t msteps)
+static bool isValidMicrosteps (uint8_t motor, uint16_t msteps)
 {
     return tmc_microsteps_validate((tmc2130_microsteps_t)msteps);
 }
 
-static void SetMicrosteps (uint8_t axis, uint16_t msteps)
+static void setMicrosteps (uint8_t motor, uint16_t msteps)
 {
-   TMC2130_SetMicrosteps(tmcdriver[axis], (tmc2130_microsteps_t)msteps);
+   TMC2130_SetMicrosteps(tmcdriver[motor], (tmc2130_microsteps_t)msteps);
 }
 
-static void SetCurrent (uint8_t axis, uint16_t mA, uint8_t hold_pct)
+static void setCurrent (uint8_t motor, uint16_t mA, uint8_t hold_pct)
 {
-    TMC2130_SetCurrent(tmcdriver[axis], mA, hold_pct);
+    TMC2130_SetCurrent(tmcdriver[motor], mA, hold_pct);
 }
 
-static uint16_t GetCurrent (uint8_t axis)
+static uint16_t getCurrent (uint8_t motor)
 {
-    return TMC2130_GetCurrent(tmcdriver[axis]);
+    return TMC2130_GetCurrent(tmcdriver[motor]);
 }
 
-static TMC_chopconf_t GetChopconf (uint8_t axis)
+static TMC_chopconf_t getChopconf (uint8_t motor)
 {
     TMC_chopconf_t chopconf;
 
-    tmc_spi_read(tmcdriver[axis]->motor, (TMC_spi_datagram_t *)&tmcdriver[axis]->chopconf);
-
-    chopconf.mres = tmcdriver[axis]->chopconf.reg.mres;
-    chopconf.toff = tmcdriver[axis]->chopconf.reg.toff;
-    chopconf.tbl = tmcdriver[axis]->chopconf.reg.tbl;
-    chopconf.hend = tmcdriver[axis]->chopconf.reg.hend;
-    chopconf.hstrt = tmcdriver[axis]->chopconf.reg.hstrt;
+    tmc_spi_read(tmcdriver[motor]->config.motor, (TMC_spi_datagram_t *)&tmcdriver[motor]->chopconf);
+    chopconf.mres = tmcdriver[motor]->chopconf.reg.mres;
+    chopconf.toff = tmcdriver[motor]->chopconf.reg.toff;
+    chopconf.tbl = tmcdriver[motor]->chopconf.reg.tbl;
+    chopconf.hend = tmcdriver[motor]->chopconf.reg.hend;
+    chopconf.hstrt = tmcdriver[motor]->chopconf.reg.hstrt;
 
     return chopconf;
 }
 
-static TMC_drv_status_t GetDriverStatus (uint8_t axis)
+static uint32_t getStallGuardResult (uint8_t motor)
+{
+    tmc_spi_read(tmcdriver[motor]->config.motor, (TMC_spi_datagram_t *)&tmcdriver[motor]->drv_status);
+
+    return (uint32_t)tmcdriver[motor]->drv_status.reg.sg_result;
+}
+
+static TMC_drv_status_t getDriverStatus (uint8_t motor)
 {
     TMC_drv_status_t drv_status;
     TMC2130_status_t status;
 
-    status.value = tmc_spi_read(tmcdriver[axis]->motor, (TMC_spi_datagram_t *)&tmcdriver[axis]->drv_status);
+    status.value = tmc_spi_read(tmcdriver[motor]->config.motor, (TMC_spi_datagram_t *)&tmcdriver[motor]->drv_status);
 
     drv_status.driver_error = status.driver_error;
-    drv_status.sg_result = tmcdriver[axis]->drv_status.reg.sg_result;
-    drv_status.ot = tmcdriver[axis]->drv_status.reg.ot;
-    drv_status.otpw = tmcdriver[axis]->drv_status.reg.otpw;
-    drv_status.cs_actual = tmcdriver[axis]->drv_status.reg.cs_actual;
-    drv_status.stst = tmcdriver[axis]->drv_status.reg.stst;
-    drv_status.fsactive = tmcdriver[axis]->drv_status.reg.fsactive;
-    drv_status.ola = tmcdriver[axis]->drv_status.reg.ola;
-    drv_status.olb = tmcdriver[axis]->drv_status.reg.olb;
-    drv_status.s2ga = tmcdriver[axis]->drv_status.reg.s2ga;
-    drv_status.s2gb = tmcdriver[axis]->drv_status.reg.s2gb;
+    drv_status.sg_result = tmcdriver[motor]->drv_status.reg.sg_result;
+    drv_status.ot = tmcdriver[motor]->drv_status.reg.ot;
+    drv_status.otpw = tmcdriver[motor]->drv_status.reg.otpw;
+    drv_status.cs_actual = tmcdriver[motor]->drv_status.reg.cs_actual;
+    drv_status.stst = tmcdriver[motor]->drv_status.reg.stst;
+    drv_status.fsactive = tmcdriver[motor]->drv_status.reg.fsactive;
+    drv_status.ola = tmcdriver[motor]->drv_status.reg.ola;
+    drv_status.olb = tmcdriver[motor]->drv_status.reg.olb;
+    drv_status.s2ga = tmcdriver[motor]->drv_status.reg.s2ga;
+    drv_status.s2gb = tmcdriver[motor]->drv_status.reg.s2gb;
 
     return drv_status;
 }
 
-static TMC_ihold_irun_t GetIholdIrun (uint8_t axis)
+static TMC_ihold_irun_t getIholdIrun (uint8_t motor)
 {
     TMC_ihold_irun_t ihold_irun;
 
-    ihold_irun.ihold = tmcdriver[axis]->ihold_irun.reg.ihold;
-    ihold_irun.irun = tmcdriver[axis]->ihold_irun.reg.irun;
-    ihold_irun.iholddelay = tmcdriver[axis]->ihold_irun.reg.iholddelay;
+    ihold_irun.ihold = tmcdriver[motor]->ihold_irun.reg.ihold;
+    ihold_irun.irun = tmcdriver[motor]->ihold_irun.reg.irun;
+    ihold_irun.iholddelay = tmcdriver[motor]->ihold_irun.reg.iholddelay;
 
     return ihold_irun;
 }
 
-static uint32_t GetDriverStatusRaw (uint8_t axis)
+static uint32_t getDriverStatusRaw (uint8_t motor)
 {
-    tmc_spi_read(tmcdriver[axis]->motor, (TMC_spi_datagram_t *)&tmcdriver[axis]->drv_status);
+    tmc_spi_read(tmcdriver[motor]->config.motor, (TMC_spi_datagram_t *)&tmcdriver[motor]->drv_status);
 
-    return tmcdriver[axis]->drv_status.reg.value;
+    return tmcdriver[motor]->drv_status.reg.value;
 }
 
-static uint32_t GetTStep (uint8_t axis)
+static uint32_t getTStep (uint8_t motor)
 {
-    tmc_spi_read(tmcdriver[axis]->motor, (TMC_spi_datagram_t *)&tmcdriver[axis]->tstep);
+    tmc_spi_read(tmcdriver[motor]->config.motor, (TMC_spi_datagram_t *)&tmcdriver[motor]->tstep);
 
-    return (uint32_t)tmcdriver[axis]->tstep.reg.tstep;
+    return (uint32_t)tmcdriver[motor]->tstep.reg.tstep;
 }
 
-static void SetTHigh (uint8_t axis, float mm_sec, float steps_mm)
+static void setTHigh (uint8_t motor, float mm_sec, float steps_mm)
 {
-    TMC2130_SetTHIGH(tmcdriver[axis], mm_sec, steps_mm);
+    TMC2130_SetTHIGH(tmcdriver[motor], mm_sec, steps_mm);
 }
 
-static void SetTHighRaw (uint8_t axis, uint32_t value)
+static void setTHighRaw (uint8_t motor, uint32_t value)
 {
-    tmcdriver[axis]->thigh.reg.thigh = value;
-    tmc_spi_write(tmcdriver[axis]->motor, (TMC_spi_datagram_t *)&tmcdriver[axis]->thigh);
+    tmcdriver[motor]->thigh.reg.thigh = value;
+    tmc_spi_write(tmcdriver[motor]->config.motor, (TMC_spi_datagram_t *)&tmcdriver[motor]->thigh);
 }
 
-static void SetTCoolThrs (uint8_t axis, float mm_sec, float steps_mm)
+static void setTCoolThrs (uint8_t motor, float mm_sec, float steps_mm)
 {
-    TMC2130_SetTCOOLTHRS(tmcdriver[axis], mm_sec, steps_mm);
+    TMC2130_SetTCOOLTHRS(tmcdriver[motor], mm_sec, steps_mm);
 }
 
-static void SetTCoolThrsRaw (uint8_t axis, uint32_t value)
+static void setTCoolThrsRaw (uint8_t motor, uint32_t value)
 {
-    tmcdriver[axis]->tcoolthrs.reg.tcoolthrs = value;
-    tmc_spi_write(tmcdriver[axis]->motor, (TMC_spi_datagram_t *)&tmcdriver[axis]->tcoolthrs);
+    tmcdriver[motor]->tcoolthrs.reg.tcoolthrs = value;
+    tmc_spi_write(tmcdriver[motor]->config.motor, (TMC_spi_datagram_t *)&tmcdriver[motor]->tcoolthrs);
 }
 
-static void stallGuardEnable (uint8_t axis, bool enable, uint8_t sensitivity)
+static void stallGuardEnable (uint8_t motor, float feed_rate, float steps_mm, uint8_t sensitivity)
 {
-    TMC2130_t *driver = tmcdriver[axis];
+    TMC2130_t *driver = tmcdriver[motor];
 
-    driver->gconf.reg.diag1_stall = enable;
-    driver->gconf.reg.en_pwm_mode = !enable; // stealthChop
-    tmc_spi_write(driver->motor, (TMC_spi_datagram_t *)&driver->gconf);
+    driver->gconf.reg.diag1_stall = true;
+    driver->gconf.reg.en_pwm_mode = false; // stealthChop
+    tmc_spi_write(driver->config.motor, (TMC_spi_datagram_t *)&driver->gconf);
 
-    driver->pwmconf.reg.pwm_autoscale = !enable;
-    tmc_spi_write(driver->motor, (TMC_spi_datagram_t *)&driver->pwmconf);
+    driver->pwmconf.reg.pwm_autoscale = false;
+    tmc_spi_write(driver->config.motor, (TMC_spi_datagram_t *)&driver->pwmconf);
 
-    driver->tcoolthrs.reg.tcoolthrs = enable ? (1 << 20) - 1 : 0;
-    tmc_spi_write(driver->motor, (TMC_spi_datagram_t *)&driver->tcoolthrs);
+    TMC2130_SetTCOOLTHRS(driver, feed_rate / 60.0f * 1.5f, steps_mm);
+    TMC2130_SetTHIGH(driver, feed_rate / 60.0f * 0.6f, steps_mm);
 
     driver->coolconf.reg.sgt = sensitivity & 0x7F; // 7-bits signed value
-    tmc_spi_write(driver->motor, (TMC_spi_datagram_t *)&driver->coolconf);
+    tmc_spi_write(driver->config.motor, (TMC_spi_datagram_t *)&driver->coolconf);
 }
 
-static uint32_t GetTPWMThrs (uint8_t axis, float steps_mm)
+static void stealthChopEnable (uint8_t motor)
 {
-    return TMC2130_GetTPWMTHRS(tmcdriver[axis], steps_mm);
+    TMC2130_t *driver = tmcdriver[motor];
+
+    driver->gconf.reg.diag1_stall = false;
+    driver->gconf.reg.en_pwm_mode = true; // stealthChop
+    TMC2130_WriteRegister(driver, (TMC2130_datagram_t *)&driver->gconf);
+
+    driver->pwmconf.reg.pwm_autoscale = true;
+    TMC2130_WriteRegister(driver, (TMC2130_datagram_t *)&driver->pwmconf);
 }
 
-static uint32_t GetTPWMThrsRaw (uint8_t axis)
+static void coolStepEnable (uint8_t motor)
 {
-    tmc_spi_read(tmcdriver[axis]->motor, (TMC_spi_datagram_t *)&tmcdriver[axis]->tpwmthrs);
+    TMC2130_t *driver = tmcdriver[motor];
 
-    return tmcdriver[axis]->tpwmthrs.reg.tpwmthrs;
+    driver->gconf.reg.en_pwm_mode = false; // stealthChop
+    TMC2130_WriteRegister(driver, (TMC2130_datagram_t *)&driver->gconf);
+
+    driver->pwmconf.reg.pwm_autoscale = false;
+    TMC2130_WriteRegister(driver, (TMC2130_datagram_t *)&driver->pwmconf);
+}
+
+static float getTPWMThrs (uint8_t motor, float steps_mm)
+{
+    return TMC2130_GetTPWMTHRS(tmcdriver[motor], steps_mm);
+}
+
+static uint32_t getTPWMThrsRaw (uint8_t motor)
+{
+    return tmcdriver[motor]->tpwmthrs.reg.tpwmthrs;
+}
+
+static void setTPWMThrs (uint8_t motor, float mm_sec, float steps_mm)
+{
+    TMC2130_SetTPWMTHRS(tmcdriver[motor], mm_sec, steps_mm);
 }
 
 // gconf
 
-static void stealthChop (uint8_t axis, bool val)
+static void stealthChop (uint8_t motor, bool val)
 {
-    tmcdriver[axis]->gconf.reg.en_pwm_mode = val;
-    tmc_spi_write(tmcdriver[axis]->motor, (TMC_spi_datagram_t *)&tmcdriver[axis]->gconf);
+    tmcdriver[motor]->gconf.reg.en_pwm_mode = val;
+    tmc_spi_write(tmcdriver[motor]->config.motor, (TMC_spi_datagram_t *)&tmcdriver[motor]->gconf);
 }
 
-static bool stealthChopGet (uint8_t axis)
+static bool stealthChopGet (uint8_t motor)
 {
-    return tmcdriver[axis]->gconf.reg.en_pwm_mode;
+    return tmcdriver[motor]->gconf.reg.en_pwm_mode;
 }
 
 // coolconf
 
-static void sg_filter (uint8_t axis, bool val)
+static void sg_filter (uint8_t motor, bool val)
 {
-    tmcdriver[axis]->coolconf.reg.sfilt = val;
-    tmc_spi_write(tmcdriver[axis]->motor, (TMC_spi_datagram_t *)&tmcdriver[axis]->coolconf);
+    tmcdriver[motor]->coolconf.reg.sfilt = val;
+    tmc_spi_write(tmcdriver[motor]->config.motor, (TMC_spi_datagram_t *)&tmcdriver[motor]->coolconf);
 }
 
-static void sg_stall_value (uint8_t axis, uint8_t val)
+static void sg_stall_value (uint8_t motor, uint8_t val)
 {
-    tmcdriver[axis]->coolconf.reg.sgt = val;
-    tmc_spi_write(tmcdriver[axis]->motor, (TMC_spi_datagram_t *)&tmcdriver[axis]->coolconf);
+    tmcdriver[motor]->coolconf.reg.sgt = val;
+    tmc_spi_write(tmcdriver[motor]->config.motor, (TMC_spi_datagram_t *)&tmcdriver[motor]->coolconf);
 }
 
-static uint8_t get_sg_stall_value (uint8_t axis)
+static uint8_t get_sg_stall_value (uint8_t motor)
 {
-    return tmcdriver[axis]->coolconf.reg.sgt;
+    return tmcdriver[motor]->coolconf.reg.sgt;
 }
 
-static void sedn (uint8_t axis, uint8_t val)
+static void sedn (uint8_t motor, uint8_t val)
 {
-    tmcdriver[axis]->coolconf.reg.sedn = val;
-    tmc_spi_write(tmcdriver[axis]->motor, (TMC_spi_datagram_t *)&tmcdriver[axis]->coolconf);
+    tmcdriver[motor]->coolconf.reg.sedn = val;
+    tmc_spi_write(tmcdriver[motor]->config.motor, (TMC_spi_datagram_t *)&tmcdriver[motor]->coolconf);
 }
 
-static void semin (uint8_t axis, uint8_t val)
+static void semin (uint8_t motor, uint8_t val)
 {
-    tmcdriver[axis]->coolconf.reg.semin = val;
-    tmc_spi_write(tmcdriver[axis]->motor, (TMC_spi_datagram_t *)&tmcdriver[axis]->coolconf);
+    tmcdriver[motor]->coolconf.reg.semin = val;
+    tmc_spi_write(tmcdriver[motor]->config.motor, (TMC_spi_datagram_t *)&tmcdriver[motor]->coolconf);
 }
 
-static void semax (uint8_t axis, uint8_t val)
+static void semax (uint8_t motor, uint8_t val)
 {
-    tmcdriver[axis]->coolconf.reg.semax = val;
-    tmc_spi_write(tmcdriver[axis]->motor, (TMC_spi_datagram_t *)&tmcdriver[axis]->coolconf);
+    tmcdriver[motor]->coolconf.reg.semax = val;
+    tmc_spi_write(tmcdriver[motor]->config.motor, (TMC_spi_datagram_t *)&tmcdriver[motor]->coolconf);
 }
 
 // chopconf
 
-static void toff (uint8_t axis, uint8_t val)
+static void toff (uint8_t motor, uint8_t val)
 {
-    tmcdriver[axis]->chopconf.reg.toff = val;
-    tmc_spi_write(tmcdriver[axis]->motor, (TMC_spi_datagram_t *)&tmcdriver[axis]->chopconf);
+    tmcdriver[motor]->chopconf.reg.toff = val;
+    tmc_spi_write(tmcdriver[motor]->config.motor, (TMC_spi_datagram_t *)&tmcdriver[motor]->chopconf);
 }
 
-static void tbl (uint8_t axis, uint8_t val)
+static void tbl (uint8_t motor, uint8_t val)
 {
-    tmcdriver[axis]->chopconf.reg.tbl = val;
-    tmc_spi_write(tmcdriver[axis]->motor, (TMC_spi_datagram_t *)&tmcdriver[axis]->chopconf);
+    tmcdriver[motor]->chopconf.reg.tbl = val;
+    tmc_spi_write(tmcdriver[motor]->config.motor, (TMC_spi_datagram_t *)&tmcdriver[motor]->chopconf);
 }
 
-static void chopper_mode (uint8_t axis, uint8_t val)
+static void chopper_mode (uint8_t motor, uint8_t val)
 {
-    tmcdriver[axis]->chopconf.reg.chm = val;
-    tmc_spi_write(tmcdriver[axis]->motor, (TMC_spi_datagram_t *)&tmcdriver[axis]->chopconf);
+    tmcdriver[motor]->chopconf.reg.chm = val;
+    tmc_spi_write(tmcdriver[motor]->config.motor, (TMC_spi_datagram_t *)&tmcdriver[motor]->chopconf);
 }
 
-static void hysteresis_start (uint8_t axis, uint8_t val)
+static void hysteresis_start (uint8_t motor, uint8_t val)
 {
-    tmcdriver[axis]->chopconf.reg.hstrt = (uint8_t)(val - 1) & 0x07;
-    tmc_spi_write(tmcdriver[axis]->motor, (TMC_spi_datagram_t *)&tmcdriver[axis]->chopconf);
+    tmcdriver[motor]->chopconf.reg.hstrt = (uint8_t)(val - 1) & 0x07;
+    tmc_spi_write(tmcdriver[motor]->config.motor, (TMC_spi_datagram_t *)&tmcdriver[motor]->chopconf);
 }
 
-static void hysteresis_end (uint8_t axis, int8_t val)
+static void hysteresis_end (uint8_t motor, int8_t val)
 {
-    tmcdriver[axis]->chopconf.reg.hend = (uint8_t)(val + 3);
-    tmc_spi_write(tmcdriver[axis]->motor, (TMC_spi_datagram_t *)&tmcdriver[axis]->chopconf);
+    tmcdriver[motor]->chopconf.reg.hend = (uint8_t)(val + 3);
+    tmc_spi_write(tmcdriver[motor]->config.motor, (TMC_spi_datagram_t *)&tmcdriver[motor]->chopconf);
 }
 
-static const tmchal_t hal = {
+static uint8_t pwm_scale (uint8_t motor)
+{
+    tmc_spi_read(tmcdriver[motor]->config.motor, (TMC_spi_datagram_t *)&tmcdriver[motor]->pwm_scale);
+
+    return tmcdriver[motor]->pwm_scale.reg.pwm_scale;
+}
+
+static bool vsense (uint8_t motor)
+{
+    tmc_spi_read(tmcdriver[motor]->config.motor, (TMC_spi_datagram_t *)&tmcdriver[motor]->chopconf);
+
+    return tmcdriver[motor]->chopconf.reg.vsense;
+}
+
+static const tmchal_t tmchal = {
     .driver = TMC2130,
     .name = "TMC2130",
 
     .get_config = getConfig,
 
-    .microsteps_isvalid = MicrostepsIsValid,
-    .set_microsteps = SetMicrosteps,
-    .set_current = SetCurrent,
-    .get_current = GetCurrent,
-    .get_chopconf = GetChopconf,
-    .get_tstep = GetTStep,
-    .get_drv_status = GetDriverStatus,
-    .get_drv_status_raw = GetDriverStatusRaw,
-    .set_tcoolthrs = SetTCoolThrs,
-    .set_tcoolthrs_raw = SetTCoolThrsRaw,
-    .set_thigh = SetTHigh,
-    .set_thigh_raw = SetTHighRaw,
+    .microsteps_isvalid = isValidMicrosteps,
+    .set_microsteps = setMicrosteps,
+    .set_current = setCurrent,
+    .get_current = getCurrent,
+    .get_chopconf = getChopconf,
+    .get_tstep = getTStep,
+    .get_drv_status = getDriverStatus,
+    .get_drv_status_raw = getDriverStatusRaw,
+    .set_tcoolthrs = setTCoolThrs,
+    .set_tcoolthrs_raw = setTCoolThrsRaw,
+    .set_thigh = setTHigh,
+    .set_thigh_raw = setTHighRaw,
     .stallguard_enable = stallGuardEnable,
-    .get_tpwmthrs = GetTPWMThrs,
-    .get_tpwmthrs_raw = GetTPWMThrsRaw,
+    .stealthchop_enable = stealthChopEnable,
+    .coolstep_enable = coolStepEnable,
+    .get_sg_result = getStallGuardResult,
+    .get_tpwmthrs = getTPWMThrs,
+    .get_tpwmthrs_raw = getTPWMThrsRaw,
+    .set_tpwmthrs = setTPWMThrs,
     .get_en_pwm_mode = stealthChopGet,
-    .get_ihold_irun = GetIholdIrun,
+    .get_ihold_irun = getIholdIrun,
 
     .stealthChop = stealthChop,
     .sg_filter = sg_filter,
@@ -298,26 +350,29 @@ static const tmchal_t hal = {
     .semax = semax,
     .toff = toff,
     .tbl = tbl,
+    .vsense = vsense,
+    .pwm_scale = pwm_scale,
     .chopper_mode = chopper_mode,
     .hysteresis_start = hysteresis_start,
     .hysteresis_end = hysteresis_end
 };
 
-const tmchal_t *TMC2130_AddAxis (uint8_t axis, uint16_t current, uint8_t microsteps, uint8_t r_sense)
+const tmchal_t *TMC2130_AddMotor (motor_map_t motor, uint16_t current, uint8_t microsteps, uint8_t r_sense)
 {
-    bool ok = !!tmcdriver[axis];
+    bool ok = !!tmcdriver[motor.id];
 
-    if(!ok && (ok = (tmcdriver[axis] = malloc(sizeof(TMC2130_t))) != NULL)) {
-        TMC2130_SetDefaults(tmcdriver[axis]);
-        tmcdriver[axis]->motor.axis = axis;
-        tmcdriver[axis]->config.current = current;
-        tmcdriver[axis]->config.microsteps = microsteps;
-        tmcdriver[axis]->config.r_sense = r_sense;
-        tmcdriver[axis]->chopconf.reg.mres = tmc_microsteps_to_mres(microsteps);
+    if(!ok && (ok = (tmcdriver[motor.id] = malloc(sizeof(TMC2130_t))) != NULL)) {
+        TMC2130_SetDefaults(tmcdriver[motor.id]);
+        tmcdriver[motor.id]->config.motor.id = motor.id;
+        tmcdriver[motor.id]->config.motor.axis = motor.axis;
+        tmcdriver[motor.id]->config.current = current;
+        tmcdriver[motor.id]->config.microsteps = microsteps;
+        tmcdriver[motor.id]->config.r_sense = r_sense;
+        tmcdriver[motor.id]->chopconf.reg.mres = tmc_microsteps_to_mres(microsteps);
     }
 
-    if(ok && !(ok = TMC2130_Init(tmcdriver[axis])))
-        free(tmcdriver[axis]);
+    if(ok && !(ok = TMC2130_Init(tmcdriver[motor.id])))
+        free(tmcdriver[motor.id]);
 
-    return ok ? &hal : NULL;
+    return ok ? &tmchal : NULL;
 }

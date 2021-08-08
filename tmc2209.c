@@ -1,12 +1,12 @@
 /*
  * tmc2209.c - interface for Trinamic TMC2209 stepper driver
  *
- * v0.0.2 / 2020-12-26 / (c) Io Engineering / Terje
+ * v0.0.3 / 2021-08-05 / (c) Io Engineering / Terje
  */
 
 /*
 
-Copyright (c) 2020, Terje Io
+Copyright (c) 2020-2021, Terje Io
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -49,7 +49,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 static const TMC2209_t tmc2209_defaults = {
     .config.f_clk = TMC2209_F_CLK,
-    .config.cool_step_enabled = TMC2209_COOLSTEP_ENABLE,
+    .config.mode = TMC2209_MODE,
     .config.r_sense = TMC2209_R_SENSE,
     .config.current = TMC2209_CURRENT,
     .config.hold_current_pct = TMC2209_HOLD_CURRENT_PCT,
@@ -77,21 +77,31 @@ static const TMC2209_t tmc2209_defaults = {
     .coolconf.addr.reg = TMC2209Reg_COOLCONF,
     .mscnt.addr.reg = TMC2209Reg_MSCNT,
     .mscuract.addr.reg = TMC2209Reg_MSCURACT,
-    .chopconf.addr.reg = TMC2209Reg_CHOPCONF,
-    .chopconf.reg.value = 0x10000053,
+    .chopconf.addr.reg = TMC2209Reg_CHOPCONF, // 0x10000053
+    .chopconf.reg.toff = 3,
+    .chopconf.reg.hstrt = 5,
+    .chopconf.reg.intpol = 1,
     .drv_status.addr.reg = TMC2209Reg_DRV_STATUS,
-    .pwmconf.addr.reg = TMC2209Reg_PWMCONF,
-    .pwmconf.reg.value = 0xC10D0024,
+    .pwmconf.addr.reg = TMC2209Reg_PWMCONF, // 0xC10D0024
+    .pwmconf.reg.pwm_lim = 12,
+    .pwmconf.reg.pwm_reg = 8,
+    .pwmconf.reg.pwm_autograd = true,
+    .pwmconf.reg.pwm_freq = 0b01,
+    .pwmconf.reg.pwm_grad = 14,
+    .pwmconf.reg.pwm_ofs = 36,
     .pwm_scale.addr.reg = TMC2209Reg_PWM_SCALE,
-    .pwm_auto.addr.reg = TMC2209Reg_PWM_AUTO
+    .pwm_auto.addr.reg = TMC2209Reg_PWM_AUTO,
+#if TMC2209_MODE == 0 // TMCMode_StealthChop
+    .gconf.reg.en_spreadcycle = false,
+    .pwmconf.reg.pwm_autoscale = true,
+#elif TMC2209_MODE == 1 // TMCMode_CoolStep
+    .gconf.reg.en_spreadcycle = true,
+    .pwmconf.reg.pwm_autoscale = false,
+#else // TMCMode_StallGuard
+    .gconf.reg.en_spreadcycle = false,
+    .pwmconf.reg.pwm_autoscale = false,
+#endif
 };
-
-static void set_tfd (TMC2209_chopconf_reg_t *chopconf, uint8_t fast_decay_time)
-{
-//!    chopconf->chm = 1;
-//!    chopconf->fd3 = (fast_decay_time & 0x8) >> 3;
-    chopconf->hstrt = fast_decay_time & 0x7;
-}
 
 void TMC2209_SetDefaults (TMC2209_t *driver)
 {
@@ -113,7 +123,7 @@ bool TMC2209_Init (TMC2209_t *driver)
     TMC2209_ReadRegister(driver, (TMC2209_datagram_t *)&driver->gconf);
     driver->gconf.reg.pdn_disable = 1;
     driver->gconf.reg.mstep_reg_select = 1;
-//    driver->gconf.reg.I_scale_analog = 1;
+//    driver->gconf.reg.I_scale_analog = 0;
 //    driver->gconf.reg.internal_Rsense = 0;
 //    driver->gconf.reg.en_spreadcycle = 0;
 //    driver->gconf.reg.multistep_filt = 1;
@@ -168,20 +178,14 @@ void TMC2209_SetCurrent (TMC2209_t *driver, uint16_t mA, uint8_t hold_pct)
     TMC2209_WriteRegister(driver, (TMC2209_datagram_t *)&driver->ihold_irun);
 }
 
-uint32_t TMC2209_GetTPWMTHRS (TMC2209_t *driver, float stpmm)
+float TMC2209_GetTPWMTHRS (TMC2209_t *driver, float steps_mm)
 {
-    return (uint32_t)((driver->config.microsteps * TMC2209_F_CLK) / (256 * driver->tpwmthrs.reg.tpwmthrs * stpmm));
+    return (float)(driver->config.f_clk * driver->config.microsteps) / (256.0f * (float)driver->tpwmthrs.reg.tpwmthrs * steps_mm);
 }
 
-void TMC2209_SetTPWMTHRS (TMC2209_t *driver, uint32_t velocity, float stpmm)
+void TMC2209_SetTPWMTHRS (TMC2209_t *driver, float mm_sec, float steps_mm)
 {
-    driver->tpwmthrs.reg.tpwmthrs = (uint32_t)((driver->config.microsteps * TMC2209_F_CLK) / (256 * velocity * stpmm));
-}
-
-// threshold = velocity in mm/s
-void TMC2209_SetHybridThreshold (TMC2209_t *driver, uint32_t threshold, float steps_mm)
-{
-    driver->tpwmthrs.reg.tpwmthrs = threshold == 0.0f ? 0UL : driver->config.f_clk * driver->config.microsteps / (256 * (uint32_t)((float)threshold * steps_mm));
+    driver->tpwmthrs.reg.tpwmthrs = tmc_calc_tstep(&driver->config, mm_sec, steps_mm);;
     TMC2209_WriteRegister(driver, (TMC2209_datagram_t *)&driver->tpwmthrs);
 }
 
@@ -226,10 +230,9 @@ void TMC2209_SetConstantOffTimeChopper (TMC2209_t *driver, uint8_t constant_off_
     if (fast_decay_time > 15)
         fast_decay_time = 15;
 
-    set_tfd(&driver->chopconf.reg, fast_decay_time);
-
     driver->chopconf.reg.tbl = blank_time;
     driver->chopconf.reg.toff = constant_off_time < 2 ? 2 : (constant_off_time > 15 ? 15 : constant_off_time);
+    driver->chopconf.reg.hstrt = fast_decay_time & 0x7;
     driver->chopconf.reg.hend = (sine_wave_offset < -3 ? -3 : (sine_wave_offset > 12 ? 12 : sine_wave_offset)) + 3;
 //!    driver->chopconf.reg.rndtf = !use_current_comparator;
 
@@ -271,7 +274,7 @@ bool TMC2209_WriteRegister (TMC2209_t *driver, TMC2209_datagram_t *reg)
     TMC_uart_write_datagram_t datagram;
 
     datagram.msg.sync = 0x05;
-    datagram.msg.slave = driver->config.addr;
+    datagram.msg.slave = driver->config.motor.id;
     datagram.msg.addr.value = reg->addr.value;
     datagram.msg.addr.write = 1;
     datagram.msg.payload.value = reg->payload.value;
@@ -280,7 +283,7 @@ bool TMC2209_WriteRegister (TMC2209_t *driver, TMC2209_datagram_t *reg)
 
     calcCRC(datagram.data, sizeof(TMC_uart_write_datagram_t));
 
-    tmc_uart_write(driver->motor, &datagram);
+    tmc_uart_write(driver->config.motor, &datagram);
 
 // TODO: add check for ok'ed?
 
@@ -295,12 +298,12 @@ bool TMC2209_ReadRegister (TMC2209_t *driver, TMC2209_datagram_t *reg)
     TMC_uart_write_datagram_t *res;
 
     datagram.msg.sync = 0x05;
-    datagram.msg.slave = driver->config.addr;
+    datagram.msg.slave = driver->config.motor.id;
     datagram.msg.addr.value = reg->addr.value;
     datagram.msg.addr.write = 0;
     calcCRC(datagram.data, sizeof(TMC_uart_read_datagram_t));
 
-    res = tmc_uart_read(driver->motor, &datagram);
+    res = tmc_uart_read(driver->config.motor, &datagram);
 
     if(res->msg.slave == 0xFF && res->msg.addr.value == datagram.msg.addr.value) {
         uint8_t crc = res->msg.crc;
