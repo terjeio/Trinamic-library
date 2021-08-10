@@ -59,19 +59,42 @@ static const TMC2130_t tmc2130_defaults = {
     .gstat.addr.reg = TMC2130Reg_GSTAT,
     .ioin.addr.reg = TMC2130Reg_IOIN,
     .ihold_irun.addr.reg = TMC2130Reg_IHOLD_IRUN,
+    .ihold_irun.reg.irun = TMC2130_IRUN,
+    .ihold_irun.reg.ihold = TMC2130_IHOLD,
+    .ihold_irun.reg.iholddelay = TMC2130_IHOLDDELAY,
     .tpowerdown.addr.reg = TMC2130Reg_TPOWERDOWN,
+    .tpowerdown.reg.tpowerdown = TMC2130_TPOWERDOWN,
     .tstep.addr.reg = TMC2130Reg_TSTEP,
     .tpwmthrs.addr.reg = TMC2130Reg_TPWMTHRS,
+    .tpwmthrs.reg.tpwmthrs = TMC2130_TPWM_THRS,
     .tcoolthrs.addr.reg = TMC2130Reg_TCOOLTHRS,
+    .tcoolthrs.reg.tcoolthrs = TMC2130_COOLSTEP_THRS,
     .thigh.addr.reg = TMC2130Reg_THIGH,
     .vdcmin.addr.reg = TMC2130Reg_VDCMIN,
     .mscnt.addr.reg = TMC2130Reg_MSCNT,
     .mscuract.addr.reg = TMC2130Reg_MSCURACT,
     .chopconf.addr.reg = TMC2130Reg_CHOPCONF,
+    .chopconf.reg.intpol = TMC2130_INTERPOLATE,
+    .chopconf.reg.toff = TMC2130_CONSTANT_OFF_TIME,
+    .chopconf.reg.chm = TMC2130_CHOPPER_MODE,
+    .chopconf.reg.tbl = TMC2130_BLANK_TIME,
+    .chopconf.reg.rndtf = TMC2130_RANDOM_TOFF,
+#if TMC2130_CHOPPER_MODE == 0
+    .chopconf.reg.hstrt = TMC2130_HSTRT,
+    .chopconf.reg.hend = TMC2130_HEND,
+#else
+    .chopconf.reg.fd3 = (TMC2130_FAST_DECAY_TIME & 0x08) >> 3,
+    .chopconf.reg.hstrt = TMC2130_FAST_DECAY_TIME & 0x07,
+    .chopconf.reg.hend = TMC2130_SINE_WAVE_OFFSET,
+#endif
     .coolconf.addr.reg = TMC2130Reg_COOLCONF,
     .dcctrl.addr.reg = TMC2130Reg_DCCTRL,
     .drv_status.addr.reg = TMC2130Reg_DRV_STATUS,
     .pwmconf.addr.reg = TMC2130Reg_PWMCONF,
+    .pwmconf.reg.pwm_autoscale = TMC2130_PWM_AUTOSCALE,
+    .pwmconf.reg.pwm_ampl = TMC2130_PWM_AMPL,
+    .pwmconf.reg.pwm_grad = TMC2130_PWM_GRAD,
+    .pwmconf.reg.pwm_freq = TMC2130_PWM_FREQ,
     .pwm_scale.addr.reg = TMC2130Reg_PWM_SCALE,
     .lost_steps.addr.reg = TMC2130Reg_LOST_STEPS,
 #ifdef TMC2130_COMPLETE
@@ -89,42 +112,15 @@ static const TMC2130_t tmc2130_defaults = {
     .encm_ctrl.addr.reg = TMC2130Reg_ENCM_CTRL,
 #endif
 
-#if TMC2130_COOLSTEP_ENABLE
+#if TMC2130_MODE == 0 // TMCMode_StealthChop
+    .gconf.reg.en_pwm_mode = true,
+#elif TMC2130_MODE == 1 // TMCMode_CoolStep
+    .gconf.reg.en_pwm_mode = false,
     .coolconf.reg.semin = TMC2130_COOLSTEP_SEMIN,
     .coolconf.reg.semax = TMC2130_COOLSTEP_SEMAX,
+#else // TMCMode_StallGuard
+
 #endif
-
-    .chopconf.reg.intpol = TMC2130_INTERPOLATE,
-    .chopconf.reg.toff = TMC2130_CONSTANT_OFF_TIME,
-    .chopconf.reg.chm = TMC2130_CHOPPER_MODE,
-    .chopconf.reg.tbl = TMC2130_BLANK_TIME,
-    .chopconf.reg.rndtf = TMC2130_RANDOM_TOFF,
-#if TMC2130_CHOPPER_MODE == 0
-    .chopconf.reg.hstrt = TMC2130_HSTRT,
-    .chopconf.reg.hend = TMC2130_HEND,
-#else
-    .chopconf.reg.fd3 = (TMC2130_FAST_DECAY_TIME & 0x08) >> 3,
-    .chopconf.reg.hstrt = TMC2130_FAST_DECAY_TIME & 0x07,
-    .chopconf.reg.hend = TMC2130_SINE_WAVE_OFFSET,
-#endif
-
-    .ihold_irun.reg.irun = TMC2130_IRUN,
-    .ihold_irun.reg.ihold = TMC2130_IHOLD,
-    .ihold_irun.reg.iholddelay = TMC2130_IHOLDDELAY,
-
-    .tpowerdown.reg.tpowerdown = TMC2130_TPOWERDOWN,
-
-#if TMC2130_MODE == 0
-    .gconf.reg.en_pwm_mode = true,
-    .pwmconf.reg.pwm_autoscale = TMC2130_PWM_AUTOSCALE,
-    .pwmconf.reg.pwm_ampl = TMC2130_PWM_AMPL,
-    .pwmconf.reg.pwm_grad = TMC2130_PWM_GRAD,
-    .pwmconf.reg.pwm_freq = TMC2130_PWM_FREQ,
-#else
-    .gconf.reg.en_pwm_mode = false,
-#endif
-
-    .tpwmthrs.reg.tpwmthrs = 0
 };
 
 static void set_tfd (TMC2130_chopconf_reg_t *chopconf, uint8_t fast_decay_time)
@@ -200,12 +196,12 @@ void TMC2130_SetCurrent (TMC2130_t *driver, uint16_t mA, uint8_t hold_pct)
 
 float TMC2130_GetTPWMTHRS (TMC2130_t *driver, float steps_mm)
 {
-    return (float)(driver->config.f_clk * driver->config.microsteps) / (256.0f * (float)driver->tpwmthrs.reg.tpwmthrs * steps_mm);
+    return tmc_calc_tstep_inv(&driver->config, driver->tpwmthrs.reg.tpwmthrs, steps_mm);
 }
 
 void TMC2130_SetTPWMTHRS (TMC2130_t *driver, float mm_sec, float steps_mm)
 {
-    driver->tpwmthrs.reg.tpwmthrs = tmc_calc_tstep(&driver->config, mm_sec, steps_mm);;
+    driver->tpwmthrs.reg.tpwmthrs = tmc_calc_tstep(&driver->config, mm_sec, steps_mm);
     tmc_spi_write(driver->config.motor, (TMC_spi_datagram_t *)&driver->tpwmthrs);
 }
 

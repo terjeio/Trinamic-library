@@ -60,16 +60,36 @@ static const TMC5160_t tmc5160_defaults = {
     .ioin.addr.reg = TMC5160Reg_IOIN,
     .global_scaler.addr.reg = TMC5160Reg_GLOBAL_SCALER,
     .ihold_irun.addr.reg = TMC5160Reg_IHOLD_IRUN,
+    .ihold_irun.reg.irun = TMC5160_IRUN,
+    .ihold_irun.reg.ihold = TMC5160_IHOLD,
+    .ihold_irun.reg.iholddelay = TMC5160_IHOLDDELAY,
     .tpowerdown.addr.reg = TMC5160Reg_TPOWERDOWN,
+    .tpowerdown.reg.tpowerdown = TMC5160_TPOWERDOWN,
     .tstep.addr.reg = TMC5160Reg_TSTEP,
     .tpwmthrs.addr.reg = TMC5160Reg_TPWMTHRS,
+    .tpwmthrs.reg.tpwmthrs = TMC5160_TPWM_THRS,
     .tcoolthrs.addr.reg = TMC5160Reg_TCOOLTHRS,
+    .tcoolthrs.reg.tcoolthrs = TMC5160_COOLSTEP_THRS,
     .thigh.addr.reg = TMC5160Reg_THIGH,
     .vdcmin.addr.reg = TMC5160Reg_VDCMIN,
     .mscnt.addr.reg = TMC5160Reg_MSCNT,
     .mscuract.addr.reg = TMC5160Reg_MSCURACT,
     .chopconf.addr.reg = TMC5160Reg_CHOPCONF,
+    .chopconf.reg.intpol = TMC5160_INTERPOLATE,
+    .chopconf.reg.toff = TMC5160_CONSTANT_OFF_TIME,
+    .chopconf.reg.chm = TMC5160_CHOPPER_MODE,
+    .chopconf.reg.tbl = TMC5160_BLANK_TIME,
+#if TMC5160_CHOPPER_MODE == 0
+    .chopconf.reg.hstrt = TMC5160_HSTRT,
+    .chopconf.reg.hend = TMC5160_HEND,
+#else
+    .chopconf.reg.fd3 = (TMC5160_FAST_DECAY_TIME & 0x08) >> 3,
+    .chopconf.reg.hstrt = TMC5160_FAST_DECAY_TIME & 0x07,
+    .chopconf.reg.hend = TMC5160_SINE_WAVE_OFFSET,
+#endif
     .coolconf.addr.reg = TMC5160Reg_COOLCONF,
+    .coolconf.reg.semin = TMC5160_COOLSTEP_SEMIN,
+    .coolconf.reg.semax = TMC5160_COOLSTEP_SEMAX,
     .dcctrl.addr.reg = TMC5160Reg_DCCTRL,
     .drv_status.addr.reg = TMC5160Reg_DRV_STATUS,
     .pwmconf.addr.reg = TMC5160Reg_PWMCONF,
@@ -90,28 +110,6 @@ static const TMC5160_t tmc5160_defaults = {
     .encm_ctrl.addr.reg = TMC5160Reg_ENCM_CTRL,
 #endif
 
-    .coolconf.reg.semin = TMC5160_COOLSTEP_SEMIN,
-    .coolconf.reg.semax = TMC5160_COOLSTEP_SEMAX,
-
-    .chopconf.reg.intpol = TMC5160_INTERPOLATE,
-    .chopconf.reg.toff = TMC5160_CONSTANT_OFF_TIME,
-    .chopconf.reg.chm = TMC5160_CHOPPER_MODE,
-    .chopconf.reg.tbl = TMC5160_BLANK_TIME,
-#if TMC5160_CHOPPER_MODE == 0
-    .chopconf.reg.hstrt = TMC5160_HSTRT,
-    .chopconf.reg.hend = TMC5160_HEND,
-#else
-    .chopconf.reg.fd3 = (TMC5160_FAST_DECAY_TIME & 0x08) >> 3,
-    .chopconf.reg.hstrt = TMC5160_FAST_DECAY_TIME & 0x07,
-    .chopconf.reg.hend = TMC5160_SINE_WAVE_OFFSET,
-#endif
-
-    .ihold_irun.reg.irun = TMC5160_IRUN,
-    .ihold_irun.reg.ihold = TMC5160_IHOLD,
-    .ihold_irun.reg.iholddelay = TMC5160_IHOLDDELAY,
-
-    .tpowerdown.reg.tpowerdown = TMC5160_TPOWERDOWN,
-
 #if TMC5160_MODE == 0 // stealthChop
     .gconf.reg.en_pwm_mode = true,
     .pwmconf.reg.pwm_lim = 12,
@@ -125,7 +123,6 @@ static const TMC5160_t tmc5160_defaults = {
     .gconf.reg.en_pwm_mode = false,
 #endif
 
-    .tpwmthrs.reg.tpwmthrs = TMC5160_TPWM_THRS
 };
 
 static void set_tfd (TMC5160_chopconf_reg_t *chopconf, uint8_t fast_decay_time)
@@ -226,7 +223,7 @@ void TMC5160_SetCurrent (TMC5160_t *driver, uint16_t mA, uint8_t hold_pct)
 
 float TMC5160_GetTPWMTHRS (TMC5160_t *driver, float steps_mm)
 {
-    return (float)(driver->config.f_clk * driver->config.microsteps) / (256.0f * (float)driver->tpwmthrs.reg.tpwmthrs * steps_mm);
+    return tmc_calc_tstep_inv(&driver->config, driver->tpwmthrs.reg.tpwmthrs, steps_mm);
 }
 
 void TMC5160_SetTPWMTHRS (TMC5160_t *driver, float mm_sec, float steps_mm) // -> pwm threshold

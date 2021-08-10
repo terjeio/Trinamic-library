@@ -72,6 +72,7 @@ static const TMC2209_t tmc2209_defaults = {
     .tpwmthrs.addr.reg = TMC2209Reg_TPWMTHRS,
     .vactual.addr.reg = TMC2209Reg_VACTUAL,
     .tcoolthrs.addr.reg = TMC2209Reg_TCOOLTHRS,
+    .tcoolthrs.reg.tcoolthrs = TMC2209_COOLSTEP_THRS,
     .sgthrs.addr.reg = TMC2209Reg_SGTHRS,
     .sg_result.addr.reg = TMC2209Reg_SG_RESULT,
     .coolconf.addr.reg = TMC2209Reg_COOLCONF,
@@ -180,12 +181,12 @@ void TMC2209_SetCurrent (TMC2209_t *driver, uint16_t mA, uint8_t hold_pct)
 
 float TMC2209_GetTPWMTHRS (TMC2209_t *driver, float steps_mm)
 {
-    return (float)(driver->config.f_clk * driver->config.microsteps) / (256.0f * (float)driver->tpwmthrs.reg.tpwmthrs * steps_mm);
+    return tmc_calc_tstep_inv(&driver->config, driver->tpwmthrs.reg.tpwmthrs, steps_mm);
 }
 
 void TMC2209_SetTPWMTHRS (TMC2209_t *driver, float mm_sec, float steps_mm)
 {
-    driver->tpwmthrs.reg.tpwmthrs = tmc_calc_tstep(&driver->config, mm_sec, steps_mm);;
+    driver->tpwmthrs.reg.tpwmthrs = tmc_calc_tstep(&driver->config, mm_sec, steps_mm);
     TMC2209_WriteRegister(driver, (TMC2209_datagram_t *)&driver->tpwmthrs);
 }
 

@@ -152,7 +152,7 @@ static void setTCoolThrsRaw (uint8_t motor, uint32_t value)
     TMC2209_WriteRegister(tmcdriver[motor], (TMC2209_datagram_t *)&tmcdriver[motor]->tcoolthrs);
 }
 
-static void stallGuardEnable (uint8_t motor, float feed_rate, float steps_mm, uint8_t sensitivity)
+static void stallGuardEnable (uint8_t motor, float feed_rate, float steps_mm, int16_t sensitivity)
 {
     TMC2209_t *driver = tmcdriver[motor];
 
@@ -164,7 +164,7 @@ static void stallGuardEnable (uint8_t motor, float feed_rate, float steps_mm, ui
 
     TMC2209_SetTCOOLTHRS(driver, feed_rate / (60.0f * 1.5f), steps_mm);
 
-    driver->sgthrs.reg.threshold = sensitivity;
+    driver->sgthrs.reg.threshold = (uint8_t)sensitivity;
     TMC2209_WriteRegister(driver, (TMC2209_datagram_t *)&driver->sgthrs);
 }
 
@@ -226,15 +226,15 @@ static void sg_filter (uint8_t motor, bool val)
 //    TMC2209_WriteRegister(tmcdriver[motor], (TMC2209_datagram_t *)&tmcdriver[motor]->coolconf);
 }
 
-static void sg_stall_value (uint8_t motor, uint8_t val)
+static void sg_stall_value (uint8_t motor, int16_t val)
 {
-    tmcdriver[motor]->sgthrs.reg.threshold = val;
+    tmcdriver[motor]->sgthrs.reg.threshold = (uint8_t)val;
     TMC2209_WriteRegister(tmcdriver[motor], (TMC2209_datagram_t *)&tmcdriver[motor]->sgthrs);
 }
 
-static uint8_t get_sg_stall_value (uint8_t motor)
+static int16_t get_sg_stall_value (uint8_t motor)
 {
-    return tmcdriver[motor]->sgthrs.reg.threshold;
+    return (int16_t)tmcdriver[motor]->sgthrs.reg.threshold;
 }
 
 static void sedn (uint8_t motor, uint8_t val)

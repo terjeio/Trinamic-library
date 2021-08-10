@@ -41,7 +41,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <stdint.h>
 #include <stdbool.h>
 
-#define N_TMC_MOTORS 6  // max number of Trinamic drivers
+#define TMC_N_MOTORS_MAX    6  // max number of Trinamic drivers
+#define TMC_THRESHOLD_MAX   ((1<<20) - 1)
 
 typedef struct {
     uint8_t id;     // motor id
@@ -126,6 +127,7 @@ typedef uint8_t TMC_spi_status_t;
 bool tmc_microsteps_validate (uint16_t microsteps);
 uint8_t tmc_microsteps_to_mres (uint16_t microsteps);
 uint32_t tmc_calc_tstep (trinamic_config_t *config, float mm_sec, float steps_mm);
+float tmc_calc_tstep_inv (trinamic_config_t *config, uint32_t tstep, float steps_mm);
 void tmc_motors_set (uint8_t motors);
 uint8_t tmc_motors_get (void);
 

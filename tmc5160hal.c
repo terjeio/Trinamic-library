@@ -164,7 +164,7 @@ static void setTCoolThrsRaw (uint8_t motor, uint32_t value)
     tmc_spi_write(tmcdriver[motor]->config.motor, (TMC_spi_datagram_t *)&tmcdriver[motor]->tcoolthrs);
 }
 
-static void stallGuardEnable (uint8_t motor, float feed_rate, float steps_mm, uint8_t sensitivity)
+static void stallGuardEnable (uint8_t motor, float feed_rate, float steps_mm, int16_t sensitivity)
 {
     TMC5160_t *driver = tmcdriver[motor];
 
@@ -246,15 +246,15 @@ static void sg_filter (uint8_t motor, bool val)
     tmc_spi_write(tmcdriver[motor]->config.motor, (TMC_spi_datagram_t *)&tmcdriver[motor]->coolconf);
 }
 
-static void sg_stall_value (uint8_t motor, uint8_t val)
+static void sg_stall_value (uint8_t motor, int16_t val)
 {
-    tmcdriver[motor]->coolconf.reg.sgt = val;
+    tmcdriver[motor]->coolconf.reg.sgt = val & 0x7F; // 7-bits signed value
     tmc_spi_write(tmcdriver[motor]->config.motor, (TMC_spi_datagram_t *)&tmcdriver[motor]->coolconf);
 }
 
-static uint8_t get_sg_stall_value (uint8_t motor)
+static int16_t get_sg_stall_value (uint8_t motor)
 {
-    return tmcdriver[motor]->coolconf.reg.sgt;
+    return (int16_t)(tmcdriver[motor]->coolconf.reg.sgt & 0x40 ? tmcdriver[motor]->coolconf.reg.sgt | 0xFF80 : tmcdriver[motor]->coolconf.reg.sgt);
 }
 
 static void sedn (uint8_t motor, uint8_t val)
