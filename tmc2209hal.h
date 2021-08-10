@@ -40,7 +40,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define _TMC2209HAL_H_
 
 #include "tmchal.h"
-#include "grbl\hal.h"
+#include "grbl/hal.h"
 
 const tmchal_t *TMC2209_AddMotor (motor_map_t motor, uint16_t current, uint8_t microsteps, uint8_t r_sense);
 
