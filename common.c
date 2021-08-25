@@ -75,6 +75,14 @@ uint32_t tmc_calc_tstep (trinamic_config_t *config, float mm_sec, float steps_mm
     return den ? (config->microsteps * config->f_clk) / den : 0;
 }
 
+<<<<<<< HEAD
+=======
+float tmc_calc_tstep_inv (trinamic_config_t *config, uint32_t tstep, float steps_mm)
+{
+    return tstep == 0 ? 0.0f : (float)(config->f_clk * config->microsteps) / (256.0f * (float)tstep * steps_mm);
+}
+
+>>>>>>> b687cda0f174c908cc9421b42af9b442f3fa6112
 void tmc_motors_set (uint8_t motors)
 {
     tmc_motors = motors;
