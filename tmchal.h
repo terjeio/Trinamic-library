@@ -98,11 +98,7 @@ typedef void (*tmc_set_tcoolthrs)(uint8_t motor, float mm_sec, float steps_mm);
 typedef void (*tmc_set_tcoolthrs_raw)(uint8_t motor, uint32_t value);
 typedef void (*tmc_set_thigh)(uint8_t motor, float mm_sec, float steps_mm);
 typedef void (*tmc_set_thigh_raw)(uint8_t motor, uint32_t value);
-<<<<<<< HEAD
-typedef void (*tmc_stallguard_enable)(uint8_t motor, float feed_rate, float steps_mm, uint8_t sensitivity);
-=======
 typedef void (*tmc_stallguard_enable)(uint8_t motor, float feed_rate, float steps_mm, int16_t sensitivity);
->>>>>>> b687cda0f174c908cc9421b42af9b442f3fa6112
 typedef void (*tmc_stealthchop_enable)(uint8_t motor);
 typedef uint32_t (*tmc_get_sg_result)(uint8_t motor);
 typedef void (*tmc_coolstep_enable)(uint8_t motor);
@@ -114,13 +110,8 @@ typedef bool (*tmc_get_en_pwm_mode)(uint8_t motor);
 typedef TMC_ihold_irun_t (*tmc_get_ihold_irun)(uint8_t motor);
 typedef void (*tmc_stealthChop)(uint8_t motor, bool on);
 typedef void (*tmc_sg_filter)(uint8_t motor, bool on);
-<<<<<<< HEAD
-typedef void (*tmc_sg_stall_value)(uint8_t motor, uint8_t val);
-typedef uint8_t (*tmc_get_sg_stall_value)(uint8_t motor);
-=======
 typedef void (*tmc_sg_stall_value)(uint8_t motor, int16_t val);
 typedef int16_t (*tmc_get_sg_stall_value)(uint8_t motor);
->>>>>>> b687cda0f174c908cc9421b42af9b442f3fa6112
 typedef uint8_t (*tmc_pwm_scale)(uint8_t motor);
 typedef bool (*tmc_vsense)(uint8_t motor);
 typedef void (*tmc_sedn)(uint8_t motor, uint8_t val);

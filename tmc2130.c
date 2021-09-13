@@ -120,27 +120,7 @@ static const TMC2130_t tmc2130_defaults = {
     .coolconf.reg.semax = TMC2130_COOLSTEP_SEMAX,
 #else // TMCMode_StallGuard
 
-<<<<<<< HEAD
-    .ihold_irun.reg.irun = TMC2130_IRUN,
-    .ihold_irun.reg.ihold = TMC2130_IHOLD,
-    .ihold_irun.reg.iholddelay = TMC2130_IHOLDDELAY,
-
-    .tpowerdown.reg.tpowerdown = TMC2130_TPOWERDOWN,
-
-#if TMC2130_MODE == 0
-    .gconf.reg.en_pwm_mode = true,
-    .pwmconf.reg.pwm_autoscale = TMC2130_PWM_AUTOSCALE,
-    .pwmconf.reg.pwm_ampl = TMC2130_PWM_AMPL,
-    .pwmconf.reg.pwm_grad = TMC2130_PWM_GRAD,
-    .pwmconf.reg.pwm_freq = TMC2130_PWM_FREQ,
-#else
-    .gconf.reg.en_pwm_mode = false,
 #endif
-
-    .tpwmthrs.reg.tpwmthrs = 0
-=======
-#endif
->>>>>>> b687cda0f174c908cc9421b42af9b442f3fa6112
 };
 
 static void set_tfd (TMC2130_chopconf_reg_t *chopconf, uint8_t fast_decay_time)
@@ -216,20 +196,12 @@ void TMC2130_SetCurrent (TMC2130_t *driver, uint16_t mA, uint8_t hold_pct)
 
 float TMC2130_GetTPWMTHRS (TMC2130_t *driver, float steps_mm)
 {
-<<<<<<< HEAD
-    return (float)(driver->config.f_clk * driver->config.microsteps) / (256.0f * (float)driver->tpwmthrs.reg.tpwmthrs * steps_mm);
-=======
     return tmc_calc_tstep_inv(&driver->config, driver->tpwmthrs.reg.tpwmthrs, steps_mm);
->>>>>>> b687cda0f174c908cc9421b42af9b442f3fa6112
 }
 
 void TMC2130_SetTPWMTHRS (TMC2130_t *driver, float mm_sec, float steps_mm)
 {
-<<<<<<< HEAD
-    driver->tpwmthrs.reg.tpwmthrs = tmc_calc_tstep(&driver->config, mm_sec, steps_mm);;
-=======
     driver->tpwmthrs.reg.tpwmthrs = tmc_calc_tstep(&driver->config, mm_sec, steps_mm);
->>>>>>> b687cda0f174c908cc9421b42af9b442f3fa6112
     tmc_spi_write(driver->config.motor, (TMC_spi_datagram_t *)&driver->tpwmthrs);
 }
 

@@ -41,22 +41,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <stdint.h>
 #include <stdbool.h>
 
-<<<<<<< HEAD
-#define N_TMC_MOTORS 6  // max number of Trinamic drivers
-=======
 #define TMC_N_MOTORS_MAX    6  // max number of Trinamic drivers
 #define TMC_THRESHOLD_MAX   ((1<<20) - 1)
->>>>>>> b687cda0f174c908cc9421b42af9b442f3fa6112
 
 typedef struct {
     uint8_t id;     // motor id
     uint8_t axis;   // axis index
-<<<<<<< HEAD
-    void *cs_pin;   // the CS pin for the stepper driver
-=======
     uint8_t seq;    // optional motor sequence number (for chained SPI drivers)
     void *cs_pin;   // optional CS pin data for the stepper driver
->>>>>>> b687cda0f174c908cc9421b42af9b442f3fa6112
 } trinamic_motor_t;
 
 typedef enum {
@@ -136,10 +128,7 @@ typedef uint8_t TMC_spi_status_t;
 bool tmc_microsteps_validate (uint16_t microsteps);
 uint8_t tmc_microsteps_to_mres (uint16_t microsteps);
 uint32_t tmc_calc_tstep (trinamic_config_t *config, float mm_sec, float steps_mm);
-<<<<<<< HEAD
-=======
 float tmc_calc_tstep_inv (trinamic_config_t *config, uint32_t tstep, float steps_mm);
->>>>>>> b687cda0f174c908cc9421b42af9b442f3fa6112
 void tmc_motors_set (uint8_t motors);
 uint8_t tmc_motors_get (void);
 
