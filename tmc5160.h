@@ -60,7 +60,11 @@ typedef enum {
 // default values
 
 // General
+<<<<<<< HEAD
+#define TMC5160_F_CLK               12000000UL  // typical value @ 50C for internal osc - see datasheet for calibration procedure if required
+=======
 #define TMC5160_F_CLK               12000000UL  // factory tuned to 12MHz - see datasheet for calibration procedure if required
+>>>>>>> b687cda0f174c908cc9421b42af9b442f3fa6112
 #define TMC5160_MODE                0           // 0 = TMCMode_StealthChop, 1 = TMCMode_CoolStep, 3 = TMCMode_StallGuard
 #define TMC5160_MICROSTEPS          TMC5160_Microsteps_4
 #define TMC5160_R_SENSE             75          // mOhm
@@ -93,7 +97,10 @@ typedef enum {
 // COOLCONF
 #define TMC5160_COOLSTEP_SEMIN      1    // semin: 0 = coolStep off, 1 - 15 = coolStep on
 #define TMC5160_COOLSTEP_SEMAX      1    // semax: 0 - 15
+<<<<<<< HEAD
+=======
 #define TMC5160_COOLSTEP_THRS       TMC_THRESHOLD_MAX
+>>>>>>> b687cda0f174c908cc9421b42af9b442f3fa6112
 
 // end of default values
 

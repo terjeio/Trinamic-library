@@ -39,7 +39,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <stdlib.h>
 #include <string.h>
 
+<<<<<<< HEAD
+#include "grbl\hal.h"
+=======
 #include "grbl/hal.h"
+>>>>>>> b687cda0f174c908cc9421b42af9b442f3fa6112
 
 #include "tmc2209.h"
 #include "tmchal.h"
@@ -152,7 +156,11 @@ static void setTCoolThrsRaw (uint8_t motor, uint32_t value)
     TMC2209_WriteRegister(tmcdriver[motor], (TMC2209_datagram_t *)&tmcdriver[motor]->tcoolthrs);
 }
 
+<<<<<<< HEAD
+static void stallGuardEnable (uint8_t motor, float feed_rate, float steps_mm, uint8_t sensitivity)
+=======
 static void stallGuardEnable (uint8_t motor, float feed_rate, float steps_mm, int16_t sensitivity)
+>>>>>>> b687cda0f174c908cc9421b42af9b442f3fa6112
 {
     TMC2209_t *driver = tmcdriver[motor];
 
@@ -164,7 +172,11 @@ static void stallGuardEnable (uint8_t motor, float feed_rate, float steps_mm, in
 
     TMC2209_SetTCOOLTHRS(driver, feed_rate / (60.0f * 1.5f), steps_mm);
 
+<<<<<<< HEAD
+    driver->sgthrs.reg.threshold = sensitivity;
+=======
     driver->sgthrs.reg.threshold = (uint8_t)sensitivity;
+>>>>>>> b687cda0f174c908cc9421b42af9b442f3fa6112
     TMC2209_WriteRegister(driver, (TMC2209_datagram_t *)&driver->sgthrs);
 }
 
@@ -226,6 +238,17 @@ static void sg_filter (uint8_t motor, bool val)
 //    TMC2209_WriteRegister(tmcdriver[motor], (TMC2209_datagram_t *)&tmcdriver[motor]->coolconf);
 }
 
+<<<<<<< HEAD
+static void sg_stall_value (uint8_t motor, uint8_t val)
+{
+    tmcdriver[motor]->sgthrs.reg.threshold = val;
+    TMC2209_WriteRegister(tmcdriver[motor], (TMC2209_datagram_t *)&tmcdriver[motor]->sgthrs);
+}
+
+static uint8_t get_sg_stall_value (uint8_t motor)
+{
+    return tmcdriver[motor]->sgthrs.reg.threshold;
+=======
 static void sg_stall_value (uint8_t motor, int16_t val)
 {
     tmcdriver[motor]->sgthrs.reg.threshold = (uint8_t)val;
@@ -235,6 +258,7 @@ static void sg_stall_value (uint8_t motor, int16_t val)
 static int16_t get_sg_stall_value (uint8_t motor)
 {
     return (int16_t)tmcdriver[motor]->sgthrs.reg.threshold;
+>>>>>>> b687cda0f174c908cc9421b42af9b442f3fa6112
 }
 
 static void sedn (uint8_t motor, uint8_t val)

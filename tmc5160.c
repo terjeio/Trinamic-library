@@ -110,6 +110,31 @@ static const TMC5160_t tmc5160_defaults = {
     .encm_ctrl.addr.reg = TMC5160Reg_ENCM_CTRL,
 #endif
 
+<<<<<<< HEAD
+    .coolconf.reg.semin = TMC5160_COOLSTEP_SEMIN,
+    .coolconf.reg.semax = TMC5160_COOLSTEP_SEMAX,
+
+    .chopconf.reg.intpol = TMC5160_INTERPOLATE,
+    .chopconf.reg.toff = TMC5160_CONSTANT_OFF_TIME,
+    .chopconf.reg.chm = TMC5160_CHOPPER_MODE,
+    .chopconf.reg.tbl = TMC5160_BLANK_TIME,
+#if TMC5160_CHOPPER_MODE == 0
+    .chopconf.reg.hstrt = TMC5160_HSTRT,
+    .chopconf.reg.hend = TMC5160_HEND,
+#else
+    .chopconf.reg.fd3 = (TMC5160_FAST_DECAY_TIME & 0x08) >> 3,
+    .chopconf.reg.hstrt = TMC5160_FAST_DECAY_TIME & 0x07,
+    .chopconf.reg.hend = TMC5160_SINE_WAVE_OFFSET,
+#endif
+
+    .ihold_irun.reg.irun = TMC5160_IRUN,
+    .ihold_irun.reg.ihold = TMC5160_IHOLD,
+    .ihold_irun.reg.iholddelay = TMC5160_IHOLDDELAY,
+
+    .tpowerdown.reg.tpowerdown = TMC5160_TPOWERDOWN,
+
+=======
+>>>>>>> b687cda0f174c908cc9421b42af9b442f3fa6112
 #if TMC5160_MODE == 0 // stealthChop
     .gconf.reg.en_pwm_mode = true,
     .pwmconf.reg.pwm_lim = 12,
@@ -223,7 +248,11 @@ void TMC5160_SetCurrent (TMC5160_t *driver, uint16_t mA, uint8_t hold_pct)
 
 float TMC5160_GetTPWMTHRS (TMC5160_t *driver, float steps_mm)
 {
+<<<<<<< HEAD
+    return (float)(driver->config.f_clk * driver->config.microsteps) / (256.0f * (float)driver->tpwmthrs.reg.tpwmthrs * steps_mm);
+=======
     return tmc_calc_tstep_inv(&driver->config, driver->tpwmthrs.reg.tpwmthrs, steps_mm);
+>>>>>>> b687cda0f174c908cc9421b42af9b442f3fa6112
 }
 
 void TMC5160_SetTPWMTHRS (TMC5160_t *driver, float mm_sec, float steps_mm) // -> pwm threshold

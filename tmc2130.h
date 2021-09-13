@@ -64,7 +64,11 @@ typedef enum {
 
 // General
 #define TMC2130_F_CLK               13200000UL  // typical value @ 50C for internal osc - see datasheet for calibration procedure if required
+<<<<<<< HEAD
+#define TMC2130_MODE                0           // 0 = TMCMode_StealthChop, 1 = TMCMode_CoolStep, 3 = TMCMode_StallGuard
+=======
 #define TMC2130_MODE                0           // 0 = TMCMode_StealthChop, 1 = TMCMode_CoolStep, 2 = TMCMode_StallGuard
+>>>>>>> b687cda0f174c908cc9421b42af9b442f3fa6112
 #define TMC2130_MICROSTEPS          TMC2130_Microsteps_4
 #define TMC2130_R_SENSE             110         // mOhm
 #define TMC2130_CURRENT             500         // mA RMS
@@ -103,7 +107,10 @@ typedef enum {
 // COOLCONF - TMC2130_MODE == TMCMode_CoolStep defaults
 #define TMC2130_COOLSTEP_SEMIN      1    // semin: 0 = coolStep off, 1 - 15 = coolStep on
 #define TMC2130_COOLSTEP_SEMAX      1    // semax: 0 - 15
+<<<<<<< HEAD
+=======
 #define TMC2130_COOLSTEP_THRS       TMC_THRESHOLD_MAX
+>>>>>>> b687cda0f174c908cc9421b42af9b442f3fa6112
 
 // end of default values
 
