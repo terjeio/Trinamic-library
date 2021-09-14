@@ -1,7 +1,7 @@
 /*
  * TMC2130_I2C_map.h - I2C <> SPI command mappings and datagrams for Trinamic TMC2130 stepper driver
  *
- * v0.0.3 / 2019-07-23 / ©Io Engineering / Terje
+ * v0.0.3 / 2019-07-23 / Â©Io Engineering / Terje
  */
 
 /*
@@ -12,14 +12,14 @@ All rights reserved.
 Redistribution and use in source and binary forms, with or without modification,
 are permitted provided that the following conditions are met:
 
-· Redistributions of source code must retain the above copyright notice, this
+Â· Redistributions of source code must retain the above copyright notice, this
 list of conditions and the following disclaimer.
 
-· Redistributions in binary form must reproduce the above copyright notice, this
+Â· Redistributions in binary form must reproduce the above copyright notice, this
 list of conditions and the following disclaimer in the documentation and/or
 other materials provided with the distribution.
 
-· Neither the name of the copyright holder nor the names of its contributors may
+Â· Neither the name of the copyright holder nor the names of its contributors may
 be used to endorse or promote products derived from this software without
 specific prior written permission.
 
@@ -41,7 +41,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <stdint.h>
 
-#include "trinamic2130.h"
+#include "tmc2130.h"
 
 #pragma pack(push, 1)
 
