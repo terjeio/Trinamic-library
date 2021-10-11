@@ -1,7 +1,7 @@
 /*
  * tmc2209.c - interface for Trinamic TMC2209 stepper driver
  *
- * v0.0.3 / 2021-08-05 / (c) Io Engineering / Terje
+ * v0.0.4 / 2021-10-09 / (c) Io Engineering / Terje
  */
 
 /*
@@ -57,7 +57,7 @@ static const TMC2209_t tmc2209_defaults = {
 
     // register adresses
     .gconf.addr.reg = TMC2209Reg_GCONF,
-    .stat.addr.reg = TMC2209Reg_GSTAT,
+    .gstat.addr.reg = TMC2209Reg_GSTAT,
     .ifcnt.addr.reg = TMC2209Reg_IFCNT,
     .slaveconf.addr.reg = TMC2209Reg_SLAVECONF,
     .otp_prog.addr.reg = TMC2209Reg_OTP_PROG,
@@ -69,7 +69,6 @@ static const TMC2209_t tmc2209_defaults = {
     .tpowerdown.reg.tpowerdown = 20,
     .tstep.addr.reg = TMC2209Reg_TSTEP,
     .tpwmthrs.addr.reg = TMC2209Reg_TPWMTHRS,
-    .tpwmthrs.addr.reg = TMC2209Reg_TPWMTHRS,
     .vactual.addr.reg = TMC2209Reg_VACTUAL,
     .tcoolthrs.addr.reg = TMC2209Reg_TCOOLTHRS,
     .tcoolthrs.reg.tcoolthrs = TMC2209_COOLSTEP_THRS,
@@ -79,11 +78,12 @@ static const TMC2209_t tmc2209_defaults = {
     .mscnt.addr.reg = TMC2209Reg_MSCNT,
     .mscuract.addr.reg = TMC2209Reg_MSCURACT,
     .chopconf.addr.reg = TMC2209Reg_CHOPCONF, // 0x10000053
-    .chopconf.reg.toff = 3,
-    .chopconf.reg.hstrt = 5,
-    .chopconf.reg.intpol = 1,
+    .chopconf.reg.toff = 3,         // 0 = driver disable, 1 - with TBL >= 2 only, 2...15
+    .chopconf.reg.hstrt = 5,        // 0...7 -> 1...8
+    .chopconf.reg.hend = 0,         // 0...15 -> -3...12
+    .chopconf.reg.intpol = true,    // extrapolate to 256 microsteps
     .drv_status.addr.reg = TMC2209Reg_DRV_STATUS,
-    .pwmconf.addr.reg = TMC2209Reg_PWMCONF, // 0xC10D0024
+    .pwmconf.addr.reg = TMC2209Reg_PWMCONF, // 0xC10D0024 -> 0xc80d0e24
     .pwmconf.reg.pwm_lim = 12,
     .pwmconf.reg.pwm_reg = 8,
     .pwmconf.reg.pwm_autograd = true,
@@ -113,21 +113,22 @@ void TMC2209_SetDefaults (TMC2209_t *driver)
 
 bool TMC2209_Init (TMC2209_t *driver)
 {
-    // Perform a status register read to clear reset flag and read OTP defaults
+    // Perform a status register read/write to clear status flags.
     // If no or bad response from driver return with error.
-    if(!TMC2209_ReadRegister(driver, (TMC2209_datagram_t *)&driver->stat))
+    if(!TMC2209_ReadRegister(driver, (TMC2209_datagram_t *)&driver->gstat))
         return false;
-    //    TMC2209_ReadRegister(driver, (TMC2209_datagram_t *)&driver->otp_read);
-    //    driver->gconf.reg.internal_Rsense = driver->otp_read.reg.otp0_6;
 
-    TMC2209_ReadRegister(driver, (TMC2209_datagram_t *)&driver->chopconf);
+    TMC2209_WriteRegister(driver, (TMC2209_datagram_t *)&driver->gstat);
+
     TMC2209_ReadRegister(driver, (TMC2209_datagram_t *)&driver->gconf);
     driver->gconf.reg.pdn_disable = 1;
     driver->gconf.reg.mstep_reg_select = 1;
-//    driver->gconf.reg.I_scale_analog = 0;
-//    driver->gconf.reg.internal_Rsense = 0;
-//    driver->gconf.reg.en_spreadcycle = 0;
-//    driver->gconf.reg.multistep_filt = 1;
+
+// Use default settings (from OTP) for these:
+//  driver->gconf.reg.I_scale_analog = 1;
+//  driver->gconf.reg.internal_Rsense = 0;
+//  driver->gconf.reg.en_spreadcycle = 0;
+//  driver->gconf.reg.multistep_filt = 1;
 
     TMC2209_ReadRegister(driver, (TMC2209_datagram_t *)&driver->ifcnt);
 
@@ -140,17 +141,12 @@ bool TMC2209_Init (TMC2209_t *driver)
     TMC2209_WriteRegister(driver, (TMC2209_datagram_t *)&driver->ihold_irun);
     TMC2209_WriteRegister(driver, (TMC2209_datagram_t *)&driver->tpowerdown);
     TMC2209_WriteRegister(driver, (TMC2209_datagram_t *)&driver->pwmconf);
-
-/*    TMC2209_WriteRegister(driver, (TMC2209_datagram_t *)&driver->coolconf);
-    TMC2209_WriteRegister(driver, (TMC2209_datagram_t *)&driver->ihold_irun);
     TMC2209_WriteRegister(driver, (TMC2209_datagram_t *)&driver->tpwmthrs);
-    TMC2209_SetCurrent(driver, driver->current, driver->hold_current_pct); */
-    //set to a conservative start value
-    //TMC2209_SetConstantOffTimeChopper(driver, 5, 24, 13, 12, true); // move to default values
+    TMC2209_SetCurrent(driver, driver->config.current, driver->config.hold_current_pct);
 
     TMC2209_ReadRegister(driver, (TMC2209_datagram_t *)&driver->ifcnt);
 
-    return driver->ifcnt.reg.count - ifcnt == 5;
+    return driver->ifcnt.reg.count - ifcnt == 8;
 }
 
 uint16_t TMC2209_GetCurrent (TMC2209_t *driver)
@@ -188,12 +184,6 @@ void TMC2209_SetTPWMTHRS (TMC2209_t *driver, float mm_sec, float steps_mm)
 {
     driver->tpwmthrs.reg.tpwmthrs = tmc_calc_tstep(&driver->config, mm_sec, steps_mm);
     TMC2209_WriteRegister(driver, (TMC2209_datagram_t *)&driver->tpwmthrs);
-}
-
-void TMC2209_SetTHIGH (TMC2209_t *driver, float mm_sec, float steps_mm) // -> pwm threshold
-{
-//    driver->thigh.reg.thigh = tmc_calc_tstep(driver, mm_sec, steps_mm);
-//    TMC2209_WriteRegister(driver, (TMC2209_datagram_t *)&driver->thigh);
 }
 
 void TMC2209_SetTCOOLTHRS (TMC2209_t *driver, float mm_sec, float steps_mm) // -> pwm threshold

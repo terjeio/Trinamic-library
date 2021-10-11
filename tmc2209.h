@@ -1,7 +1,7 @@
 /*
  * tmc2209.h - register and message (datagram) descriptors for Trinamic TMC2209 stepper driver
  *
- * v0.0.3 / 2021-08-05 / (c) Io Engineering / Terje
+ * v0.0.4 / 2021-10-09 / (c) Io Engineering / Terje
  */
 
 /*
@@ -500,7 +500,7 @@ typedef struct {
 typedef struct {
     TMC2209_addr_t addr;
     TMC2209_gstat_reg_t reg;
-} TMC2209_stat_dgr_t;
+} TMC2209_gstat_dgr_t;
 
 typedef struct {
     TMC2209_addr_t addr;
@@ -672,7 +672,7 @@ typedef union {
 typedef struct {
     // driver registers
     TMC2209_gconf_dgr_t gconf;
-    TMC2209_stat_dgr_t stat;
+    TMC2209_gstat_dgr_t gstat;
     TMC2209_ifcnt_dgr_t ifcnt;
     TMC2209_slaveconf_dgr_t slaveconf;
     TMC2209_otp_prog_dgr_t otp_prog;

@@ -1,7 +1,7 @@
 /*
  * tmc5160hal.c - interface for Trinamic TMC5160 stepper driver
  *
- * v0.0.2 / 2021-08-05 / (c) Io Engineering / Terje
+ * v0.0.3 / 2021-10-10 / (c) Io Engineering / Terje
  */
 
 /*
@@ -361,7 +361,7 @@ const tmchal_t *TMC5160_AddMotor (motor_map_t motor, uint16_t current, uint8_t m
 {
     bool ok = !!tmcdriver[motor.id];
 
-    if(!ok && (ok = (tmcdriver[motor.id] = malloc(sizeof(TMC5160_t))) != NULL)) {
+    if(ok || (ok = (tmcdriver[motor.id] = malloc(sizeof(TMC5160_t))) != NULL)) {
         TMC5160_SetDefaults(tmcdriver[motor.id]);
         tmcdriver[motor.id]->config.motor.id = motor.id;
         tmcdriver[motor.id]->config.motor.axis = motor.axis;
@@ -371,8 +371,10 @@ const tmchal_t *TMC5160_AddMotor (motor_map_t motor, uint16_t current, uint8_t m
         tmcdriver[motor.id]->chopconf.reg.mres = tmc_microsteps_to_mres(microsteps);
     }
 
-    if(ok && !(ok = TMC5160_Init(tmcdriver[motor.id])))
+    if(ok && !(ok = TMC5160_Init(tmcdriver[motor.id]))) {
         free(tmcdriver[motor.id]);
+        tmcdriver[motor.id] = NULL;
+    }
 
     return ok ? &tmchal : NULL;
 }
