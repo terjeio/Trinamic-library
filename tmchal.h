@@ -1,7 +1,7 @@
 /*
  * tmchal.h - HAL interface for Trinamic stepper drivers
  *
- * v0.0.2 / 2021-08-05 / (c) Io Engineering / Terje
+ * v0.0.4 / 2021-10-16 / (c) Io Engineering / Terje
  */
 
 /*
@@ -84,6 +84,19 @@ typedef union {
     };
 } TMC_drv_status_t;
 
+
+typedef struct {
+    uint8_t semin;
+    int8_t semax;
+    uint8_t sedn;
+} TMC_coolconf_t;
+
+typedef struct {
+    uint8_t hstrt;
+    int8_t hend;
+    uint8_t tbl;
+} TMC_chopper_timing_t;
+
 typedef trinamic_config_t *(*tmc_get_config)(uint8_t motor);
 
 typedef bool (*tmc_microsteps_isvalid)(uint8_t motor, uint16_t microsteps);
@@ -114,14 +127,8 @@ typedef void (*tmc_sg_stall_value)(uint8_t motor, int16_t val);
 typedef int16_t (*tmc_get_sg_stall_value)(uint8_t motor);
 typedef uint8_t (*tmc_pwm_scale)(uint8_t motor);
 typedef bool (*tmc_vsense)(uint8_t motor);
-typedef void (*tmc_sedn)(uint8_t motor, uint8_t val);
-typedef void (*tmc_semin)(uint8_t motor, uint8_t val);
-typedef void (*tmc_semax)(uint8_t motor, uint8_t val);
-typedef void (*tmc_toff)(uint8_t motor, uint8_t val);
-typedef void (*tmc_tbl)(uint8_t motor, uint8_t val);
-typedef void (*tmc_chopper_mode)(uint8_t motor, uint8_t val);
-typedef void (*tmc_hysteresis_start)(uint8_t motor, uint8_t val);
-typedef void (*tmc_hysteresis_end)(uint8_t motor, int8_t val);
+typedef void (*tmc_coolconf)(uint8_t motor, TMC_coolconf_t coolconf);
+typedef void (*tmc_chopper_timing)(uint8_t motor, TMC_chopper_timing_t timing);
 
 typedef struct {
     const char *name;
@@ -156,15 +163,8 @@ typedef struct {
     tmc_sg_filter sg_filter;
     tmc_sg_stall_value sg_stall_value;
     tmc_get_sg_stall_value get_sg_stall_value;
-    tmc_sedn sedn;
-    tmc_semin semin;
-    tmc_semax semax;
-    tmc_toff toff;
-    tmc_tbl tbl;
     tmc_vsense vsense;
+    tmc_coolconf coolconf;
     tmc_pwm_scale pwm_scale;
-    tmc_chopper_mode chopper_mode;
-    tmc_hysteresis_start hysteresis_start;
-    tmc_hysteresis_end hysteresis_end;
-
+    tmc_chopper_timing chopper_timing;
 } tmchal_t;

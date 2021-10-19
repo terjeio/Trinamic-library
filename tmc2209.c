@@ -1,7 +1,7 @@
 /*
  * tmc2209.c - interface for Trinamic TMC2209 stepper driver
  *
- * v0.0.4 / 2021-10-09 / (c) Io Engineering / Terje
+ * v0.0.4 / 2021-10-16 / (c) Io Engineering / Terje
  */
 
 /*
@@ -57,6 +57,7 @@ static const TMC2209_t tmc2209_defaults = {
 
     // register adresses
     .gconf.addr.reg = TMC2209Reg_GCONF,
+    .gconf.reg.en_spreadcycle = TMC2209_SPREADCYCLE,
     .gstat.addr.reg = TMC2209Reg_GSTAT,
     .ifcnt.addr.reg = TMC2209Reg_IFCNT,
     .slaveconf.addr.reg = TMC2209Reg_SLAVECONF,
@@ -65,8 +66,9 @@ static const TMC2209_t tmc2209_defaults = {
     .ioin.addr.reg = TMC2209Reg_IOIN,
     .factory_conf.addr.reg = TMC2209Reg_FACTORY_CONF,
     .ihold_irun.addr.reg = TMC2209Reg_IHOLD_IRUN,
+    .ihold_irun.reg.iholddelay = TMC2209_IHOLDDELAY,
     .tpowerdown.addr.reg = TMC2209Reg_TPOWERDOWN,
-    .tpowerdown.reg.tpowerdown = 20,
+    .tpowerdown.reg.tpowerdown = TMC2209_TPOWERDOWN,
     .tstep.addr.reg = TMC2209Reg_TSTEP,
     .tpwmthrs.addr.reg = TMC2209Reg_TPWMTHRS,
     .vactual.addr.reg = TMC2209Reg_VACTUAL,
@@ -75,38 +77,53 @@ static const TMC2209_t tmc2209_defaults = {
     .sgthrs.addr.reg = TMC2209Reg_SGTHRS,
     .sg_result.addr.reg = TMC2209Reg_SG_RESULT,
     .coolconf.addr.reg = TMC2209Reg_COOLCONF,
+    .coolconf.reg.semin = TMC2209_SEMIN,
+    .coolconf.reg.seup = TMC2209_SEUP,
+    .coolconf.reg.semax = TMC2209_SEMAX,
+    .coolconf.reg.sedn = TMC2209_SEDN,
+    .coolconf.reg.seimin = TMC2209_SEIMIN,
     .mscnt.addr.reg = TMC2209Reg_MSCNT,
     .mscuract.addr.reg = TMC2209Reg_MSCURACT,
-    .chopconf.addr.reg = TMC2209Reg_CHOPCONF, // 0x10000053
-    .chopconf.reg.toff = 3,         // 0 = driver disable, 1 - with TBL >= 2 only, 2...15
-    .chopconf.reg.hstrt = 5,        // 0...7 -> 1...8
-    .chopconf.reg.hend = 0,         // 0...15 -> -3...12
-    .chopconf.reg.intpol = true,    // extrapolate to 256 microsteps
+    .chopconf.addr.reg = TMC2209Reg_CHOPCONF,
+    .chopconf.reg.tbl = TMC2209_TBL,
+    .chopconf.reg.toff = TMC2209_TOFF,          // 0 = driver disable, 1 - with TBL >= 2 only, 2...15
+    .chopconf.reg.hstrt = TMC2209_HSTRT - 1,    // 0...7 -> 1...8
+    .chopconf.reg.hend = TMC2209_HEND + 3,      // 0...15 -> -3...12
+    .chopconf.reg.intpol = TMC2209_INTPOL,
     .drv_status.addr.reg = TMC2209Reg_DRV_STATUS,
-    .pwmconf.addr.reg = TMC2209Reg_PWMCONF, // 0xC10D0024 -> 0xc80d0e24
-    .pwmconf.reg.pwm_lim = 12,
-    .pwmconf.reg.pwm_reg = 8,
-    .pwmconf.reg.pwm_autograd = true,
-    .pwmconf.reg.pwm_freq = 0b01,
-    .pwmconf.reg.pwm_grad = 14,
-    .pwmconf.reg.pwm_ofs = 36,
+    .pwmconf.addr.reg = TMC2209Reg_PWMCONF,
+    .pwmconf.reg.pwm_lim = TMC2209_PWM_LIM,
+    .pwmconf.reg.pwm_reg = TMC2209_PWM_REG,
+    .pwmconf.reg.pwm_autograd = TMC2209_PWM_AUTOGRAD,
+    .pwmconf.reg.pwm_freq = TMC2209_PWM_FREQ,
+    .pwmconf.reg.pwm_grad = TMC2209_PWM_GRAD,
+    .pwmconf.reg.pwm_ofs = TMC2209_PWM_OFS,
+    .pwmconf.reg.pwm_autoscale = TMC2209_PWM_AUTOSCALE,
     .pwm_scale.addr.reg = TMC2209Reg_PWM_SCALE,
-    .pwm_auto.addr.reg = TMC2209Reg_PWM_AUTO,
-#if TMC2209_MODE == 0 // TMCMode_StealthChop
-    .gconf.reg.en_spreadcycle = false,
-    .pwmconf.reg.pwm_autoscale = true,
-#elif TMC2209_MODE == 1 // TMCMode_CoolStep
-    .gconf.reg.en_spreadcycle = true,
-    .pwmconf.reg.pwm_autoscale = false,
-#else // TMCMode_StallGuard
-    .gconf.reg.en_spreadcycle = false,
-    .pwmconf.reg.pwm_autoscale = false,
-#endif
+    .pwm_auto.addr.reg = TMC2209Reg_PWM_AUTO
 };
+
+static void _set_rms_current (TMC2209_t *driver)
+{
+    float maxv = (((float)(driver->config.r_sense + 20)) * (float)(32UL * driver->config.current)) * 1.41421f / 1000.0f;
+
+    uint8_t current_scaling = (uint8_t)(maxv / 325.0f) - 1;
+
+    // If the current scaling is too low set the vsense bit and recalculate the current setting
+    if ((driver->chopconf.reg.vsense = (current_scaling < 16)))
+        current_scaling = (uint8_t)(maxv / 180.0f) - 1;
+
+    driver->ihold_irun.reg.irun = current_scaling > 31 ? 31 : current_scaling;
+    driver->ihold_irun.reg.ihold = (driver->ihold_irun.reg.irun * driver->config.hold_current_pct) / 100;
+
+//?    driver->coolconf.reg.seimin = driver->ihold_irun.reg.irun >= 20;
+}
 
 void TMC2209_SetDefaults (TMC2209_t *driver)
 {
     memcpy(driver, &tmc2209_defaults, sizeof(TMC2209_t));
+
+    _set_rms_current(driver);
 
     driver->chopconf.reg.mres = tmc_microsteps_to_mres(driver->config.microsteps);
 }
@@ -134,19 +151,18 @@ bool TMC2209_Init (TMC2209_t *driver)
 
     uint8_t ifcnt = driver->ifcnt.reg.count;
 
-    TMC2209_WriteRegister(driver, (TMC2209_datagram_t *)&driver->gconf);
     driver->chopconf.reg.mres = tmc_microsteps_to_mres(driver->config.microsteps);
-    TMC2209_WriteRegister(driver, (TMC2209_datagram_t *)&driver->chopconf);
-    driver->ihold_irun.reg.iholddelay = 1; // otp
-    TMC2209_WriteRegister(driver, (TMC2209_datagram_t *)&driver->ihold_irun);
+
+    TMC2209_WriteRegister(driver, (TMC2209_datagram_t *)&driver->gconf);
     TMC2209_WriteRegister(driver, (TMC2209_datagram_t *)&driver->tpowerdown);
     TMC2209_WriteRegister(driver, (TMC2209_datagram_t *)&driver->pwmconf);
     TMC2209_WriteRegister(driver, (TMC2209_datagram_t *)&driver->tpwmthrs);
+    TMC2209_WriteRegister(driver, (TMC2209_datagram_t *)&driver->tcoolthrs);
     TMC2209_SetCurrent(driver, driver->config.current, driver->config.hold_current_pct);
 
     TMC2209_ReadRegister(driver, (TMC2209_datagram_t *)&driver->ifcnt);
 
-    return driver->ifcnt.reg.count - ifcnt == 8;
+    return driver->ifcnt.reg.count - ifcnt == 7;
 }
 
 uint16_t TMC2209_GetCurrent (TMC2209_t *driver)
@@ -160,16 +176,7 @@ void TMC2209_SetCurrent (TMC2209_t *driver, uint16_t mA, uint8_t hold_pct)
     driver->config.current = mA;
     driver->config.hold_current_pct = hold_pct;
 
-    float maxv = (((float)(driver->config.r_sense + 20)) * (float)(32UL * driver->config.current)) * 1.41421f / 1000.0f;
-
-    uint8_t current_scaling = (uint8_t)(maxv / 325.0f) - 1;
-
-    // If the current scaling is too low set the vsense bit and recalculate the current setting
-    if ((driver->chopconf.reg.vsense = (current_scaling < 16)))
-        current_scaling = (uint8_t)(maxv / 180.0f) - 1;
-
-    driver->ihold_irun.reg.irun = current_scaling > 31 ? 31 : current_scaling;
-    driver->ihold_irun.reg.ihold = (driver->ihold_irun.reg.irun * driver->config.hold_current_pct) / 100;
+    _set_rms_current(driver);
 
     TMC2209_WriteRegister(driver, (TMC2209_datagram_t *)&driver->chopconf);
     TMC2209_WriteRegister(driver, (TMC2209_datagram_t *)&driver->ihold_irun);

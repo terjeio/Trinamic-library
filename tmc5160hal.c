@@ -1,7 +1,7 @@
 /*
  * tmc5160hal.c - interface for Trinamic TMC5160 stepper driver
  *
- * v0.0.3 / 2021-10-10 / (c) Io Engineering / Terje
+ * v0.0.4 / 2021-10-16 / (c) Io Engineering / Terje
  */
 
 /*
@@ -175,7 +175,7 @@ static void stallGuardEnable (uint8_t motor, float feed_rate, float steps_mm, in
     driver->pwmconf.reg.pwm_autoscale = false;
     tmc_spi_write(driver->config.motor, (TMC_spi_datagram_t *)&driver->pwmconf);
 
-    TMC5160_SetTCOOLTHRS(driver, feed_rate / 60.0f * 1.5f, steps_mm);
+    TMC5160_SetTCOOLTHRS(driver, feed_rate / (60.0f * 1.5f), steps_mm);
     TMC5160_SetTHIGH(driver, feed_rate / 60.0f * 0.6f, steps_mm);
 
     driver->coolconf.reg.sgt = sensitivity & 0x7F; // 7-bits signed value
@@ -188,10 +188,12 @@ static void stealthChopEnable (uint8_t motor)
 
     driver->gconf.reg.diag1_stall = false;
     driver->gconf.reg.en_pwm_mode = true; // stealthChop
-    TMC5160_WriteRegister(driver, (TMC5160_datagram_t *)&driver->gconf);
+    tmc_spi_write(driver->config.motor, (TMC_spi_datagram_t *)&driver->gconf);
 
     driver->pwmconf.reg.pwm_autoscale = true;
-    TMC5160_WriteRegister(driver, (TMC5160_datagram_t *)&driver->pwmconf);
+    tmc_spi_write(driver->config.motor, (TMC_spi_datagram_t *)&driver->pwmconf);
+
+    setTCoolThrsRaw(motor, 0);
 }
 
 static void coolStepEnable (uint8_t motor)
@@ -199,10 +201,12 @@ static void coolStepEnable (uint8_t motor)
     TMC5160_t *driver = tmcdriver[motor];
 
     driver->gconf.reg.en_pwm_mode = false; // stealthChop
-    TMC5160_WriteRegister(driver, (TMC5160_datagram_t *)&driver->gconf);
+    tmc_spi_write(driver->config.motor, (TMC_spi_datagram_t *)&driver->gconf);
 
     driver->pwmconf.reg.pwm_autoscale = false;
-    TMC5160_WriteRegister(driver, (TMC5160_datagram_t *)&driver->pwmconf);
+    tmc_spi_write(driver->config.motor, (TMC_spi_datagram_t *)&driver->pwmconf);
+
+    setTCoolThrsRaw(motor, 0);
 }
 
 static float getTPWMThrs (uint8_t motor, float steps_mm)
@@ -225,12 +229,14 @@ static uint8_t getGlobalScaler (uint8_t motor)
     return tmcdriver[motor]->global_scaler.reg.scaler;
 }
 
-// gconf
-
-static void stealthChop (uint8_t motor, bool val)
+static void stealthChop (uint8_t motor, bool on)
 {
-    tmcdriver[motor]->gconf.reg.en_pwm_mode = val;
-    tmc_spi_write(tmcdriver[motor]->config.motor, (TMC_spi_datagram_t *)&tmcdriver[motor]->gconf);
+    tmcdriver[motor]->config.mode = on ? TMCMode_StealthChop : TMCMode_CoolStep;
+
+    if(on)
+        stealthChopEnable(motor);
+    else
+        coolStepEnable(motor);
 }
 
 static bool stealthChopGet (uint8_t motor)
@@ -257,54 +263,27 @@ static int16_t get_sg_stall_value (uint8_t motor)
     return (int16_t)(tmcdriver[motor]->coolconf.reg.sgt & 0x40 ? tmcdriver[motor]->coolconf.reg.sgt | 0xFF80 : tmcdriver[motor]->coolconf.reg.sgt);
 }
 
-static void sedn (uint8_t motor, uint8_t val)
+static void coolconf (uint8_t motor, TMC_coolconf_t coolconf)
 {
-    tmcdriver[motor]->coolconf.reg.sedn = val;
-    tmc_spi_write(tmcdriver[motor]->config.motor, (TMC_spi_datagram_t *)&tmcdriver[motor]->coolconf);
-}
+    TMC5160_t *driver = tmcdriver[motor];
 
-static void semin (uint8_t motor, uint8_t val)
-{
-    tmcdriver[motor]->coolconf.reg.semin = val;
-    tmc_spi_write(tmcdriver[motor]->config.motor, (TMC_spi_datagram_t *)&tmcdriver[motor]->coolconf);
-}
-
-static void semax (uint8_t motor, uint8_t val)
-{
-    tmcdriver[motor]->coolconf.reg.semax = val;
-    tmc_spi_write(tmcdriver[motor]->config.motor, (TMC_spi_datagram_t *)&tmcdriver[motor]->coolconf);
+    driver->coolconf.reg.semin = coolconf.semin;
+    driver->coolconf.reg.semax = coolconf.semax;
+    driver->coolconf.reg.sedn = coolconf.sedn;
+    tmc_spi_write(tmcdriver[motor]->config.motor, (TMC_spi_datagram_t *)&driver->coolconf);
 }
 
 // chopconf
 
-static void toff (uint8_t motor, uint8_t val)
+static void chopper_timing (uint8_t motor, TMC_chopper_timing_t timing)
 {
-    tmcdriver[motor]->chopconf.reg.toff = val;
-    tmc_spi_write(tmcdriver[motor]->config.motor, (TMC_spi_datagram_t *)&tmcdriver[motor]->chopconf);
-}
+    TMC5160_t *driver = tmcdriver[motor];
 
-static void tbl (uint8_t motor, uint8_t val)
-{
-    tmcdriver[motor]->chopconf.reg.tbl = val;
-    tmc_spi_write(tmcdriver[motor]->config.motor, (TMC_spi_datagram_t *)&tmcdriver[motor]->chopconf);
-}
-
-static void chopper_mode (uint8_t motor, uint8_t val)
-{
-    tmcdriver[motor]->chopconf.reg.chm = val;
-    tmc_spi_write(tmcdriver[motor]->config.motor, (TMC_spi_datagram_t *)&tmcdriver[motor]->chopconf);
-}
-
-static void hysteresis_start (uint8_t motor, uint8_t val)
-{
-    tmcdriver[motor]->chopconf.reg.hstrt = (uint8_t)(val - 1) & 0x07;
-    tmc_spi_write(tmcdriver[motor]->config.motor, (TMC_spi_datagram_t *)&tmcdriver[motor]->chopconf);
-}
-
-static void hysteresis_end (uint8_t motor, int8_t val)
-{
-    tmcdriver[motor]->chopconf.reg.hend = (uint8_t)(val + 3);
-    tmc_spi_write(tmcdriver[motor]->config.motor, (TMC_spi_datagram_t *)&tmcdriver[motor]->chopconf);
+    driver->chopconf.reg.chm = 0;
+    driver->chopconf.reg.hstrt = timing.hstrt + 1;
+    driver->chopconf.reg.hend = timing.hend + 3;
+    driver->chopconf.reg.tbl = timing.tbl;
+    tmc_spi_write(driver->config.motor, (TMC_spi_datagram_t *)&driver->chopconf);
 }
 
 static uint8_t pwm_scale (uint8_t motor)
@@ -346,15 +325,9 @@ static const tmchal_t tmchal = {
     .sg_filter = sg_filter,
     .sg_stall_value = sg_stall_value,
     .get_sg_stall_value = get_sg_stall_value,
-    .sedn = sedn,
-    .semin = semin,
-    .semax = semax,
-    .toff = toff,
-    .tbl = tbl,
+    .coolconf = coolconf,
     .pwm_scale = pwm_scale,
-    .chopper_mode = chopper_mode,
-    .hysteresis_start = hysteresis_start,
-    .hysteresis_end = hysteresis_end
+    .chopper_timing = chopper_timing
 };
 
 const tmchal_t *TMC5160_AddMotor (motor_map_t motor, uint16_t current, uint8_t microsteps, uint8_t r_sense)

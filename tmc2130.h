@@ -1,7 +1,7 @@
 /*
  * tmc2130.h - register and message (datagram) descriptors for Trinamic TMC2130 stepper driver
  *
- * v0.0.6 / 2021-08-05 / (c) Io Engineering / Terje
+ * v0.0.7 / 2021-10-17 / (c) Io Engineering / Terje
  */
 
 /*
@@ -71,41 +71,53 @@ typedef enum {
 #define TMC2130_HOLD_CURRENT_PCT    50
 
 // CHOPCONF
-#define TMC2130_INTERPOLATE         1   // intpol: 0 = off, 1 = on
-#define TMC2130_CONSTANT_OFF_TIME   5   // toff: 1 - 15
-#define TMC2130_BLANK_TIME          1   // tbl: 0 = 16, 1 = 24, 2 = 36, 3 = 54 clocks
-#define TMC2130_RANDOM_TOFF         1   // rndtf: 0 = fixed, 1 = random
+#define TMC2130_INTPOL              1   // intpol: 0 = off, 1 = on
+#define TMC2130_TOFF                5   // toff: 1 - 15
+#define TMC2130_TBL                 1   // tbl: 0 = 16, 1 = 24, 2 = 36, 3 = 54 clocks
+#define TMC2130_RNDTF               1   // rndtf: 0 = fixed, 1 = random
 #define TMC2130_CHOPPER_MODE        0   // chm: 0 = spreadCycle, 1 = constant off time
+#define TMC2130_HEND                2   // hend or offset: -3 - 12
 // TMC2130_CHOPPER_MODE 0 defaults
 #define TMC2130_HSTRT               3   // hstrt: 0 - 7
-#define TMC2130_HEND                2   // hend: -3- 12
 // TMC2130_CHOPPER_MODE 1 defaults
-#define TMC2130_FAST_DECAY_TIME     13  // fd3 & hstrt: 0 - 15
-#define TMC2130_SINE_WAVE_OFFSET    2   // hend: -3 - 12
+#define TMC2130_TFD                 13  // fd3 & hstrt: 0 - 15
 
 // IHOLD_IRUN
-#define TMC2130_IRUN                31  // max. current
-#define TMC2130_IHOLD               ((TMC2130_IRUN * TMC2130_HOLD_CURRENT_PCT) / 100)
 #define TMC2130_IHOLDDELAY          6
 
 // TPOWERDOWN
 #define TMC2130_TPOWERDOWN          128 // 0 - ((2^8)-1) * 2^18 tCLK
 
 // TPWMTHRS
-#define TMC2130_TPWM_THRS           0   // tpwmthrs: 0 - 2^20 - 1 (20 bits)
+#define TMC2130_TPWM_THRS           TMC_THRESHOLD_MIN   // 0 - 2^20 - 1 (20 bits)
 
-// PWM_CONF - TMC2130_MODE == TMCMode_StealthChop defaults
-#define TMC2130_PWM_AUTOSCALE       1   // pwm_autoscale: 0 = forward controlled mode, 1 = automatic scaling
-#define TMC2130_PWM_FREQ            1   // pwm_freq: 0 = 1/1024, 1 = 2/683, 2 = 2/512, 3 = 2/410 fCLK
-#define TMC2130_PWM_AMPL            255 // pwm_ampl: 0 - 255
-#define TMC2130_PWM_GRAD            5   // pwm_autoscale = 1: 1 - 15, pwm_autoscale = 0: 0 - 255
+// PWMCONF - StealthChop defaults
+#define TMC2130_PWM_FREQ            1   // 0 = 1/1024, 1 = 2/683, 2 = 2/512, 3 = 2/410 fCLK
+#define TMC2130_PWM_AMPL            255 // 0 - 255
+#define TMC2130_PWM_GRAD            5  // 0 - 255
 
-// COOLCONF - TMC2130_MODE == TMCMode_CoolStep defaults
-#define TMC2130_COOLSTEP_SEMIN      1    // semin: 0 = coolStep off, 1 - 15 = coolStep on
-#define TMC2130_COOLSTEP_SEMAX      1    // semax: 0 - 15
-#define TMC2130_COOLSTEP_THRS       TMC_THRESHOLD_MAX
+// TCOOLTHRS
+#define TMC2130_COOLSTEP_THRS       TMC_THRESHOLD_MIN   // tpwmthrs: 0 - 2^20 - 1 (20 bits)
+
+// COOLCONF - CoolStep defaults
+#define TMC2130_SEMIN               5   // 0 = coolStep off, 1 - 15 = coolStep on
+#define TMC2130_SEUP                0   // 0 - 3 (1 - 8)
+#define TMC2130_SEMAX               2   // 0 - 15
+#define TMC2130_SEDN                1   // 0 - 3
+#define TMC2130_SEIMIN              0   // boolean (0 or 1)
 
 // end of default values
+
+#if TMC2130_MODE == 0   // StealthChop
+#define TMC2130_PWM_AUTOSCALE 1
+#define TMC2130_EN_PWM_MODE   1
+#elif TMC2130_MODE == 1 // CoolStep
+#define TMC2130_PWM_AUTOSCALE 0
+#define TMC2130_EN_PWM_MODE   0
+#else                   //StallGuard
+#define TMC2130_PWM_AUTOSCALE 0
+#define TMC2130_EN_PWM_MODE   0
+#endif
 
 typedef enum {
     TMC2130Reg_GCONF        = 0x00,

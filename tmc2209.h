@@ -1,7 +1,7 @@
 /*
  * tmc2209.h - register and message (datagram) descriptors for Trinamic TMC2209 stepper driver
  *
- * v0.0.4 / 2021-10-09 / (c) Io Engineering / Terje
+ * v0.0.4 / 2021-10-16 / (c) Io Engineering / Terje
  */
 
 /*
@@ -44,8 +44,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "common.h"
 
-//#define TMC2209_COMPLETE // comment out for minimum set of registers
-
 #pragma pack(push, 1)
 
 typedef enum {
@@ -71,41 +69,50 @@ typedef enum {
 #define TMC2209_HOLD_CURRENT_PCT    50
 
 // CHOPCONF
-#define TMC2209_INTERPOLATE         1   // intpol: 0 = off, 1 = on
-#define TMC2209_CONSTANT_OFF_TIME   5   // toff: 1 - 15
-#define TMC2209_BLANK_TIME          1   // tbl: 0 = 16, 1 = 24, 2 = 36, 3 = 54 clocks
-#define TMC2209_RANDOM_TOFF         1   // rndtf: 0 = fixed, 1 = random
-#define TMC2209_CHOPPER_MODE        0   // chm: 0 = spreadCycle, 1 = constant off time
-// TMC2209_CHOPPER_MODE 0 defaults
-#define TMC2209_HSTRT               3   // hstrt: 0 - 7
-#define TMC2209_HEND                2   // hend: -3 - 12
-// TMC2209_CHOPPER_MODE 1 defaults
-#define TMC2209_FAST_DECAY_TIME     13  // fd3 & hstrt: 0 - 15
-#define TMC2209_SINE_WAVE_OFFSET    2   // hend: -3 - 12
+#define TMC2209_INTPOL              1   // 0 = off, 1 = on
+#define TMC2209_TOFF                3   // 1 - 15
+#define TMC2209_TBL                 0   // 0 = 16, 1 = 24, 2 = 36, 3 = 54 clocks
+#define TMC2209_HSTRT               6   // hstrt: 0 - 7
+#define TMC2209_HEND               -3   // hend: -3 - 12
 
-// IHOLD_IRUN
-#define TMC2209_IRUN                31  // max. current
-#define TMC2209_IHOLD               ((TMC2209_IRUN * TMC2209_HOLD_CURRENT_PCT) / 100)
-#define TMC2209_IHOLDDELAY          6
+#define TMC2209_IHOLDDELAY  10 // 0 - 15
 
 // TPOWERDOWN
-#define TMC2209_TPOWERDOWN          128 // 0 - ((2^8)-1) * 2^18 tCLK
+#define TMC2209_TPOWERDOWN          20 // 0 - ((2^8)-1) * 2^18 tCLK
 
 // TPWMTHRS
-#define TMC2209_TPWM_THRS           0   // tpwmthrs: 0 - 2^20 - 1 (20 bits)
+#define TMC2209_TPWM_THRS           TMC_THRESHOLD_MIN   // tpwmthrs: 0 - 2^20 - 1 (20 bits)
 
-// PWM_CONF - TMC2130_MODE == TMCMode_StealthChop defaults
-#define TMC2209_PWM_AUTOSCALE       1   // pwm_autoscale: 0 = forward controlled mode, 1 = automatic scaling
-#define TMC2209_PWM_FREQ            1   // pwm_freq: 0 = 1/1024, 1 = 2/683, 2 = 2/512, 3 = 2/410 fCLK
-#define TMC2209_PWM_AMPL            255 // pwm_ampl: 0 - 255
-#define TMC2209_PWM_GRAD            5   // pwm_autoscale = 1: 1 - 15, pwm_autoscale = 0: 0 - 255
+// PWMCONF - StealthChop defaults
+#define TMC2209_PWM_FREQ            1   // 0 = 1/1024, 1 = 2/683, 2 = 2/512, 3 = 2/410 fCLK
+#define TMC2209_PWM_AUTOGRAD        1   // boolean (0 or 1)
+#define TMC2209_PWM_GRAD            14  // 0 - 255
+#define TMC2209_PWM_LIM             12  // 0 - 15
+#define TMC2209_PWM_REG             8   // 1 - 15
+#define TMC2209_PWM_OFS             36  // 0 - 255
 
-// COOLCONF - TMC2130_MODE == TMCMode_CoolStep defaults
-#define TMC2209_COOLSTEP_SEMIN      1   // semin: 0 = coolStep off, 1 - 15 = coolStep on
-#define TMC2209_COOLSTEP_SEMAX      1   // semax: 0 - 15
-#define TMC2209_COOLSTEP_THRS       TMC_THRESHOLD_MAX
+// TCOOLTHRS
+#define TMC2209_COOLSTEP_THRS       TMC_THRESHOLD_MIN   // tpwmthrs: 0 - 2^20 - 1 (20 bits)
+
+// COOLCONF - CoolStep defaults
+#define TMC2209_SEMIN               5   // 0 = coolStep off, 1 - 15 = coolStep on
+#define TMC2209_SEUP                0   // 0 - 3 (1 - 8)
+#define TMC2209_SEMAX               2   // 0 - 15
+#define TMC2209_SEDN                1   // 0 - 3
+#define TMC2209_SEIMIN              0   // boolean (0 or 1)
 
 // end of default values
+
+#if TMC2209_MODE == 0   // StealthChop
+#define TMC2209_PWM_AUTOSCALE 1
+#define TMC2209_SPREADCYCLE   0
+#elif TMC2209_MODE == 1 // CoolStep
+#define TMC2209_PWM_AUTOSCALE 0
+#define TMC2209_SPREADCYCLE   1
+#else                   //StallGuard
+#define TMC2209_PWM_AUTOSCALE 0
+#define TMC2209_SPREADCYCLE   0
+#endif
 
 typedef enum {
     TMC2209Reg_GCONF        = 0x00,

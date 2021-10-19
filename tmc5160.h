@@ -1,7 +1,7 @@
 /*
  * tmc5160.h - register and message (datagram) descriptors for Trinamic TMC5160 stepper driver
  *
- * v0.0.2 / 2021-08-05 / (c) Io Engineering / Terje
+ * v0.0.4 / 2021-10-17 / (c) Io Engineering / Terje
  */
 
 /*
@@ -76,12 +76,9 @@ typedef enum {
 #define TMC5160_HSTRT               3   // hstrt: 0 - 7
 #define TMC5160_HEND                2   // hend: -3 - 12
 // TMC5160_CHOPPER_MODE 1 defaults
-#define TMC5160_FAST_DECAY_TIME     13  // fd3 & hstrt: 0 - 15
-#define TMC5160_SINE_WAVE_OFFSET    2   // hend: -3 - 12
+#define TMC2130_TFD                 13  // fd3 & hstrt: 0 - 15
 
 // IHOLD_IRUN
-#define TMC5160_IRUN                31  // max. current
-#define TMC5160_IHOLD               ((TMC5160_IRUN * TMC5160_HOLD_CURRENT_PCT) / 100)
 #define TMC5160_IHOLDDELAY          6
 
 // TPOWERDOWN
@@ -90,12 +87,36 @@ typedef enum {
 // TPWMTHRS
 #define TMC5160_TPWM_THRS           0   // tpwmthrs: 0 - 2^20 - 1 (20 bits)
 
-// COOLCONF
-#define TMC5160_COOLSTEP_SEMIN      1    // semin: 0 = coolStep off, 1 - 15 = coolStep on
-#define TMC5160_COOLSTEP_SEMAX      1    // semax: 0 - 15
-#define TMC5160_COOLSTEP_THRS       TMC_THRESHOLD_MAX
+// PWMCONF - StealthChop defaults
+#define TMC5160_PWM_FREQ            1   // 0 = 1/1024, 1 = 2/683, 2 = 2/512, 3 = 2/410 fCLK
+#define TMC5160_PWM_AUTOGRAD        1   // boolean (0 or 1)
+#define TMC5160_PWM_GRAD            14  // 0 - 255
+#define TMC5160_PWM_LIM             12  // 0 - 15
+#define TMC5160_PWM_REG             8   // 1 - 15
+#define TMC5160_PWM_OFS             36  // 0 - 255
+
+// TCOOLTHRS
+#define TMC5160_COOLSTEP_THRS       TMC_THRESHOLD_MIN   // tpwmthrs: 0 - 2^20 - 1 (20 bits)
+
+// COOLCONF - CoolStep defaults
+#define TMC5160_SEMIN               5   // 0 = coolStep off, 1 - 15 = coolStep on
+#define TMC5160_SEUP                0   // 0 - 3 (1 - 8)
+#define TMC5160_SEMAX               2   // 0 - 15
+#define TMC5160_SEDN                1   // 0 - 3
+#define TMC5160_SEIMIN              0   // boolean (0 or 1)
 
 // end of default values
+
+#if TMC5160_MODE == 0   // StealthChop
+#define TMC5160_PWM_AUTOSCALE 1
+#define TMC5160_EN_PWM_MODE   1
+#elif TMC5160_MODE == 1 // CoolStep
+#define TMC5160_PWM_AUTOSCALE 0
+#define TMC5160_EN_PWM_MODE   0
+#else                   //StallGuard
+#define TMC5160_PWM_AUTOSCALE 0
+#define TMC5160_EN_PWM_MODE   0
+#endif
 
 typedef enum {
     TMC5160Reg_GCONF            = 0x00,

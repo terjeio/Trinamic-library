@@ -1,7 +1,7 @@
 /*
  * common.h - shared code for Trinamic drivers
  *
- * v0.0.2 / 2021-08-05 / (c) Io Engineering / Terje
+ * v0.0.4 / 2021-10-16 / (c) Io Engineering / Terje
  */
 
 /*
@@ -42,6 +42,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <stdbool.h>
 
 #define TMC_N_MOTORS_MAX    6  // max number of Trinamic drivers
+#define TMC_THRESHOLD_MIN   0
 #define TMC_THRESHOLD_MAX   ((1<<20) - 1)
 
 typedef struct {

@@ -1,7 +1,7 @@
 /*
  * tmc2209hal.c - interface for Trinamic TMC2209 stepper driver
  *
- * v0.0.3 / 2021-10-10 / (c) Io Engineering / Terje
+ * v0.0.4 / 2021-10-16 / (c) Io Engineering / Terje
  */
 
 /*
@@ -162,7 +162,7 @@ static void stallGuardEnable (uint8_t motor, float feed_rate, float steps_mm, in
     driver->pwmconf.reg.pwm_autoscale = false;
     TMC2209_WriteRegister(driver, (TMC2209_datagram_t *)&driver->pwmconf);
 
-    TMC2209_SetTCOOLTHRS(driver, feed_rate / 60.0f * 1.5f, steps_mm);
+    TMC2209_SetTCOOLTHRS(driver, feed_rate / (60.0f * 1.5f), steps_mm);
 
     driver->sgthrs.reg.threshold = (uint8_t)sensitivity;
     TMC2209_WriteRegister(driver, (TMC2209_datagram_t *)&driver->sgthrs);
@@ -177,6 +177,8 @@ static void stealthChopEnable (uint8_t motor)
 
     driver->pwmconf.reg.pwm_autoscale = true;
     TMC2209_WriteRegister(driver, (TMC2209_datagram_t *)&driver->pwmconf);
+
+    setTCoolThrsRaw(motor, 0);
 }
 
 static void coolStepEnable (uint8_t motor)
@@ -188,6 +190,8 @@ static void coolStepEnable (uint8_t motor)
 
     driver->pwmconf.reg.pwm_autoscale = false;
     TMC2209_WriteRegister(driver, (TMC2209_datagram_t *)&driver->pwmconf);
+
+    setTCoolThrsRaw(motor, 0);
 }
 
 static float getTPWMThrs (uint8_t motor, float steps_mm)
@@ -205,17 +209,19 @@ static void setTPWMThrs (uint8_t motor, float mm_sec, float steps_mm)
     TMC2209_SetTPWMTHRS(tmcdriver[motor], mm_sec, steps_mm);
 }
 
-// gconf
-
-static void stealthChop (uint8_t motor, bool val)
+static void stealthChop (uint8_t motor, bool on)
 {
-    tmcdriver[motor]->gconf.reg.en_spreadcycle = !val;
-    TMC2209_WriteRegister(tmcdriver[motor], (TMC2209_datagram_t *)&tmcdriver[motor]->gconf);
+    tmcdriver[motor]->config.mode = on ? TMCMode_StealthChop : TMCMode_CoolStep;
+
+    if(on)
+        stealthChopEnable(motor);
+    else
+        coolStepEnable(motor);
 }
 
 static bool stealthChopGet (uint8_t motor)
 {
-    return !tmcdriver[motor]->gconf.reg.en_spreadcycle;
+    return !tmcdriver[motor]->gconf.reg.en_spreadcycle && tmcdriver[motor]->pwmconf.reg.pwm_autoscale;
 }
 
 // coolconf
@@ -237,54 +243,26 @@ static int16_t get_sg_stall_value (uint8_t motor)
     return (int16_t)tmcdriver[motor]->sgthrs.reg.threshold;
 }
 
-static void sedn (uint8_t motor, uint8_t val)
+static void coolconf (uint8_t motor, TMC_coolconf_t coolconf)
 {
-    tmcdriver[motor]->coolconf.reg.sedn = val;
-    TMC2209_WriteRegister(tmcdriver[motor], (TMC2209_datagram_t *)&tmcdriver[motor]->coolconf);
-}
+    TMC2209_t *driver = tmcdriver[motor];
 
-static void semin (uint8_t motor, uint8_t val)
-{
-    tmcdriver[motor]->coolconf.reg.semin = val;
-    TMC2209_WriteRegister(tmcdriver[motor], (TMC2209_datagram_t *)&tmcdriver[motor]->coolconf);
-}
-
-static void semax (uint8_t motor, uint8_t val)
-{
-    tmcdriver[motor]->coolconf.reg.semax = val;
-    TMC2209_WriteRegister(tmcdriver[motor], (TMC2209_datagram_t *)&tmcdriver[motor]->coolconf);
+    driver->coolconf.reg.semin = coolconf.semin;
+    driver->coolconf.reg.semax = coolconf.semax;
+    driver->coolconf.reg.sedn = coolconf.sedn;
+    TMC2209_WriteRegister(tmcdriver[motor], (TMC2209_datagram_t *)&driver->coolconf);
 }
 
 // chopconf
 
-static void toff (uint8_t motor, uint8_t val)
+static void chopper_timing (uint8_t motor, TMC_chopper_timing_t timing)
 {
-    tmcdriver[motor]->chopconf.reg.toff = val;
-    TMC2209_WriteRegister(tmcdriver[motor], (TMC2209_datagram_t *)&tmcdriver[motor]->chopconf);
-}
+    TMC2209_t *driver = tmcdriver[motor];
 
-static void tbl (uint8_t motor, uint8_t val)
-{
-    tmcdriver[motor]->chopconf.reg.tbl = val;
-    TMC2209_WriteRegister(tmcdriver[motor], (TMC2209_datagram_t *)&tmcdriver[motor]->chopconf);
-}
-
-static void chopper_mode (uint8_t motor, uint8_t val)
-{
-//??    tmcdriver[motor]->chopconf.reg.chm = val;
-//    TMC2209_WriteRegister(tmcdriver[motor], (TMC2209_datagram_t *)&tmcdriver[motor]->chopconf);
-}
-
-static void hysteresis_start (uint8_t motor, uint8_t val)
-{
-    tmcdriver[motor]->chopconf.reg.hstrt = (uint8_t)(val - 1) & 0x07;
-    TMC2209_WriteRegister(tmcdriver[motor], (TMC2209_datagram_t *)&tmcdriver[motor]->chopconf);
-}
-
-static void hysteresis_end (uint8_t motor, int8_t val)
-{
-    tmcdriver[motor]->chopconf.reg.hend = (uint8_t)(val + 3);
-    TMC2209_WriteRegister(tmcdriver[motor], (TMC2209_datagram_t *)&tmcdriver[motor]->chopconf);
+    driver->chopconf.reg.hstrt = timing.hstrt - 1;
+    driver->chopconf.reg.hend = timing.hend + 3;
+    driver->chopconf.reg.tbl = timing.tbl;
+    TMC2209_WriteRegister(tmcdriver[motor], (TMC2209_datagram_t *)&driver->chopconf);
 }
 
 static uint8_t pwm_scale (uint8_t motor)
@@ -333,16 +311,10 @@ static const tmchal_t tmc_hal = {
     .sg_filter = sg_filter,
     .sg_stall_value = sg_stall_value,
     .get_sg_stall_value = get_sg_stall_value,
-    .sedn = sedn,
-    .semin = semin,
-    .semax = semax,
-    .toff = toff,
-    .tbl = tbl,
+    .coolconf = coolconf,
     .vsense = vsense,
     .pwm_scale = pwm_scale,
-    .chopper_mode = chopper_mode,
-    .hysteresis_start = hysteresis_start,
-    .hysteresis_end = hysteresis_end
+    .chopper_timing = chopper_timing
 };
 
 const tmchal_t *TMC2209_AddMotor (motor_map_t motor, uint16_t current, uint8_t microsteps, uint8_t r_sense)

@@ -1,7 +1,7 @@
 /*
  * tmc5160.c - interface for Trinamic TMC5160 stepper driver
  *
- * v0.0.2 / 2021-08-05 / (c) Io Engineering / Terje
+ * v0.0.3 / 2021-10-17 / (c) Io Engineering / Terje
  */
 
 /*
@@ -56,12 +56,11 @@ static const TMC5160_t tmc5160_defaults = {
 
     // register adresses
     .gconf.addr.reg = TMC5160Reg_GCONF,
+    .gconf.reg.en_pwm_mode = TMC5160_EN_PWM_MODE,
     .gstat.addr.reg = TMC5160Reg_GSTAT,
     .ioin.addr.reg = TMC5160Reg_IOIN,
     .global_scaler.addr.reg = TMC5160Reg_GLOBAL_SCALER,
     .ihold_irun.addr.reg = TMC5160Reg_IHOLD_IRUN,
-    .ihold_irun.reg.irun = TMC5160_IRUN,
-    .ihold_irun.reg.ihold = TMC5160_IHOLD,
     .ihold_irun.reg.iholddelay = TMC5160_IHOLDDELAY,
     .tpowerdown.addr.reg = TMC5160Reg_TPOWERDOWN,
     .tpowerdown.reg.tpowerdown = TMC5160_TPOWERDOWN,
@@ -79,20 +78,29 @@ static const TMC5160_t tmc5160_defaults = {
     .chopconf.reg.toff = TMC5160_CONSTANT_OFF_TIME,
     .chopconf.reg.chm = TMC5160_CHOPPER_MODE,
     .chopconf.reg.tbl = TMC5160_BLANK_TIME,
+    .chopconf.reg.hend = TMC5160_HEND,
 #if TMC5160_CHOPPER_MODE == 0
     .chopconf.reg.hstrt = TMC5160_HSTRT,
-    .chopconf.reg.hend = TMC5160_HEND,
 #else
-    .chopconf.reg.fd3 = (TMC5160_FAST_DECAY_TIME & 0x08) >> 3,
-    .chopconf.reg.hstrt = TMC5160_FAST_DECAY_TIME & 0x07,
-    .chopconf.reg.hend = TMC5160_SINE_WAVE_OFFSET,
+    .chopconf.reg.fd3 = (TMC2130_TFD & 0x08) >> 3,
+    .chopconf.reg.hstrt = TMC2130_TFD & 0x07,
 #endif
     .coolconf.addr.reg = TMC5160Reg_COOLCONF,
-    .coolconf.reg.semin = TMC5160_COOLSTEP_SEMIN,
-    .coolconf.reg.semax = TMC5160_COOLSTEP_SEMAX,
+    .coolconf.reg.semin = TMC5160_SEMIN,
+    .coolconf.reg.seup = TMC5160_SEUP,
+    .coolconf.reg.semax = TMC5160_SEMAX,
+    .coolconf.reg.sedn = TMC5160_SEDN,
+    .coolconf.reg.seimin = TMC5160_SEIMIN,
     .dcctrl.addr.reg = TMC5160Reg_DCCTRL,
     .drv_status.addr.reg = TMC5160Reg_DRV_STATUS,
     .pwmconf.addr.reg = TMC5160Reg_PWMCONF,
+    .pwmconf.reg.pwm_autoscale = TMC5160_PWM_AUTOSCALE,
+    .pwmconf.reg.pwm_lim = TMC5160_PWM_LIM,
+    .pwmconf.reg.pwm_reg = TMC5160_PWM_REG,
+    .pwmconf.reg.pwm_autograd = TMC5160_PWM_AUTOGRAD,
+    .pwmconf.reg.pwm_freq = TMC5160_PWM_FREQ,
+    .pwmconf.reg.pwm_grad = TMC5160_PWM_GRAD,
+    .pwmconf.reg.pwm_ofs = TMC5160_PWM_OFS,
     .pwm_scale.addr.reg = TMC5160Reg_PWM_SCALE,
     .lost_steps.addr.reg = TMC5160Reg_LOST_STEPS,
 #ifdef TMC5160_COMPLETE
@@ -110,31 +118,40 @@ static const TMC5160_t tmc5160_defaults = {
     .encm_ctrl.addr.reg = TMC5160Reg_ENCM_CTRL,
 #endif
 
-#if TMC5160_MODE == 0 // stealthChop
-    .gconf.reg.en_pwm_mode = true,
-    .pwmconf.reg.pwm_lim = 12,
-    .pwmconf.reg.pwm_reg = 8,
-    .pwmconf.reg.pwm_autograd = true,
-    .pwmconf.reg.pwm_autoscale = true,
-    .pwmconf.reg.pwm_freq = 0b01,
-    .pwmconf.reg.pwm_grad = 14,
-    .pwmconf.reg.pwm_ofs = 36,
-#else
-    .gconf.reg.en_pwm_mode = false,
-#endif
-
 };
 
-static void set_tfd (TMC5160_chopconf_reg_t *chopconf, uint8_t fast_decay_time)
+static void _set_rms_current (TMC5160_t *driver)
 {
-    chopconf->chm = 1;
-    chopconf->fd3 = (fast_decay_time & 0x8) >> 3;
-    chopconf->hstrt = fast_decay_time & 0x7;
+    const uint32_t V_fs = 325; // 0.325 * 1000
+    uint_fast8_t CS = 31;
+    uint32_t scaler = 0; // = 256
+
+    uint16_t RS_scaled = ((float)driver->config.r_sense / 1000.f) * 0xFFFF; // Scale to 16b
+    uint32_t numerator = 11585; // 32 * 256 * sqrt(2)
+    numerator *= RS_scaled;
+    numerator >>= 8;
+    numerator *= driver->config.current;
+
+    do {
+        uint32_t denominator = V_fs * 0xFFFF >> 8;
+        denominator *= CS + 1;
+        scaler = numerator / denominator;
+        if (scaler > 255)
+            scaler = 0; // Maximum
+        else if (scaler < 128)
+            CS--;  // Try again with smaller CS
+    } while(scaler && scaler < 128);
+
+    driver->global_scaler.reg.scaler = scaler;
+    driver->ihold_irun.reg.irun = CS > 31 ? 31 : CS;
+    driver->ihold_irun.reg.ihold = (driver->ihold_irun.reg.irun * driver->config.hold_current_pct) / 100;
 }
 
 void TMC5160_SetDefaults (TMC5160_t *driver)
 {
     memcpy(driver, &tmc5160_defaults, sizeof(TMC5160_t));
+
+    _set_rms_current(driver);
 
     driver->chopconf.reg.mres = tmc_microsteps_to_mres(driver->config.microsteps);
 }
@@ -154,7 +171,6 @@ bool TMC5160_Init (TMC5160_t *driver)
     tmc_spi_write(driver->config.motor, (TMC_spi_datagram_t *)&driver->chopconf);
     tmc_spi_write(driver->config.motor, (TMC_spi_datagram_t *)&driver->coolconf);
     tmc_spi_write(driver->config.motor, (TMC_spi_datagram_t *)&driver->pwmconf);
-    tmc_spi_write(driver->config.motor, (TMC_spi_datagram_t *)&driver->ihold_irun);
     tmc_spi_write(driver->config.motor, (TMC_spi_datagram_t *)&driver->tpowerdown);
     tmc_spi_write(driver->config.motor, (TMC_spi_datagram_t *)&driver->tpwmthrs);
 
@@ -193,29 +209,7 @@ void TMC5160_SetCurrent (TMC5160_t *driver, uint16_t mA, uint8_t hold_pct)
     driver->config.current = mA;
     driver->config.hold_current_pct = hold_pct;
 
-    const uint32_t V_fs = 325; // 0.325 * 1000
-    uint_fast8_t CS = 31;
-    uint32_t scaler = 0; // = 256
-
-    uint16_t RS_scaled = ((float)driver->config.r_sense / 1000.f) * 0xFFFF; // Scale to 16b
-    uint32_t numerator = 11585; // 32 * 256 * sqrt(2)
-    numerator *= RS_scaled;
-    numerator >>= 8;
-    numerator *= mA;
-
-    do {
-        uint32_t denominator = V_fs * 0xFFFF >> 8;
-        denominator *= CS + 1;
-        scaler = numerator / denominator;
-        if (scaler > 255)
-            scaler = 0; // Maximum
-        else if (scaler < 128)
-            CS--;  // Try again with smaller CS
-    } while(scaler && scaler < 128);
-
-    driver->global_scaler.reg.scaler = scaler;
-    driver->ihold_irun.reg.irun = CS > 31 ? 31 : CS;
-    driver->ihold_irun.reg.ihold = (driver->ihold_irun.reg.irun * driver->config.hold_current_pct) / 100;
+    _set_rms_current(driver);
 
     tmc_spi_write(driver->config.motor, (TMC_spi_datagram_t *)&driver->global_scaler);
     tmc_spi_write(driver->config.motor, (TMC_spi_datagram_t *)&driver->ihold_irun);
@@ -273,10 +267,12 @@ void TMC5160_SetConstantOffTimeChopper (TMC5160_t *driver, uint8_t constant_off_
     if (fast_decay_time > 15)
         fast_decay_time = 15;
 
-    set_tfd(&driver->chopconf.reg, fast_decay_time);
+    if(driver->chopconf.reg.chm)
+        driver->chopconf.reg.fd3 = (fast_decay_time & 0x8) >> 3;
 
     driver->chopconf.reg.tbl = blank_time;
     driver->chopconf.reg.toff = constant_off_time < 2 ? 2 : (constant_off_time > 15 ? 15 : constant_off_time);
+    driver->chopconf.reg.hstrt = fast_decay_time & 0x7;
     driver->chopconf.reg.hend = (sine_wave_offset < -3 ? -3 : (sine_wave_offset > 12 ? 12 : sine_wave_offset)) + 3;
 
     tmc_spi_write(driver->config.motor, (TMC_spi_datagram_t *)&driver->chopconf);

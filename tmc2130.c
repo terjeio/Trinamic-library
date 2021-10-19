@@ -1,7 +1,7 @@
 /*
  * tmc2130.c - interface for Trinamic TMC2130 stepper driver
  *
- * v0.0.6 / 2021-08-05 / (c) Io Engineering / Terje
+ * v0.0.7 / 2021-10-17 / (c) Io Engineering / Terje
  */
 
 /*
@@ -56,11 +56,10 @@ static const TMC2130_t tmc2130_defaults = {
 
     // register adresses
     .gconf.addr.reg = TMC2130Reg_GCONF,
+    .gconf.reg.en_pwm_mode = TMC2130_EN_PWM_MODE,
     .gstat.addr.reg = TMC2130Reg_GSTAT,
     .ioin.addr.reg = TMC2130Reg_IOIN,
     .ihold_irun.addr.reg = TMC2130Reg_IHOLD_IRUN,
-    .ihold_irun.reg.irun = TMC2130_IRUN,
-    .ihold_irun.reg.ihold = TMC2130_IHOLD,
     .ihold_irun.reg.iholddelay = TMC2130_IHOLDDELAY,
     .tpowerdown.addr.reg = TMC2130Reg_TPOWERDOWN,
     .tpowerdown.reg.tpowerdown = TMC2130_TPOWERDOWN,
@@ -74,20 +73,24 @@ static const TMC2130_t tmc2130_defaults = {
     .mscnt.addr.reg = TMC2130Reg_MSCNT,
     .mscuract.addr.reg = TMC2130Reg_MSCURACT,
     .chopconf.addr.reg = TMC2130Reg_CHOPCONF,
-    .chopconf.reg.intpol = TMC2130_INTERPOLATE,
-    .chopconf.reg.toff = TMC2130_CONSTANT_OFF_TIME,
+    .chopconf.reg.intpol = TMC2130_INTPOL,
+    .chopconf.reg.toff = TMC2130_TOFF,
     .chopconf.reg.chm = TMC2130_CHOPPER_MODE,
-    .chopconf.reg.tbl = TMC2130_BLANK_TIME,
-    .chopconf.reg.rndtf = TMC2130_RANDOM_TOFF,
+    .chopconf.reg.tbl = TMC2130_TBL,
+    .chopconf.reg.rndtf = TMC2130_RNDTF,
+    .chopconf.reg.hend = TMC2130_HEND + 3,
 #if TMC2130_CHOPPER_MODE == 0
-    .chopconf.reg.hstrt = TMC2130_HSTRT,
-    .chopconf.reg.hend = TMC2130_HEND,
+    .chopconf.reg.hstrt = TMC2130_HSTRT - 1,
 #else
-    .chopconf.reg.fd3 = (TMC2130_FAST_DECAY_TIME & 0x08) >> 3,
-    .chopconf.reg.hstrt = TMC2130_FAST_DECAY_TIME & 0x07,
-    .chopconf.reg.hend = TMC2130_SINE_WAVE_OFFSET,
+    .chopconf.reg.fd3 = (TMC2130_TFD & 0x08) >> 3,
+    .chopconf.reg.hstrt = TMC2130_TFD & 0x07,
 #endif
     .coolconf.addr.reg = TMC2130Reg_COOLCONF,
+    .coolconf.reg.semin = TMC2130_SEMIN,
+    .coolconf.reg.seup = TMC2130_SEUP,
+    .coolconf.reg.semax = TMC2130_SEMAX,
+    .coolconf.reg.sedn = TMC2130_SEDN,
+    .coolconf.reg.seimin = TMC2130_SEIMIN,
     .dcctrl.addr.reg = TMC2130Reg_DCCTRL,
     .drv_status.addr.reg = TMC2130Reg_DRV_STATUS,
     .pwmconf.addr.reg = TMC2130Reg_PWMCONF,
@@ -112,27 +115,27 @@ static const TMC2130_t tmc2130_defaults = {
     .encm_ctrl.addr.reg = TMC2130Reg_ENCM_CTRL,
 #endif
 
-#if TMC2130_MODE == 0 // TMCMode_StealthChop
-    .gconf.reg.en_pwm_mode = true,
-#elif TMC2130_MODE == 1 // TMCMode_CoolStep
-    .gconf.reg.en_pwm_mode = false,
-    .coolconf.reg.semin = TMC2130_COOLSTEP_SEMIN,
-    .coolconf.reg.semax = TMC2130_COOLSTEP_SEMAX,
-#else // TMCMode_StallGuard
-
-#endif
 };
 
-static void set_tfd (TMC2130_chopconf_reg_t *chopconf, uint8_t fast_decay_time)
+static void _set_rms_current (TMC2130_t *driver)
 {
-    chopconf->chm = 1;
-    chopconf->fd3 = (fast_decay_time & 0x8) >> 3;
-    chopconf->hstrt = fast_decay_time & 0x7;
+    float maxv = (((float)(driver->config.r_sense + 20)) * (float)(32UL * driver->config.current)) * 1.41421f / 1000.0f;
+
+    uint8_t current_scaling = (uint8_t)(maxv / 325.0f) - 1;
+
+    // If the current scaling is too low set the vsense bit and recalculate the current setting
+    if ((driver->chopconf.reg.vsense = (current_scaling < 16)))
+        current_scaling = (uint8_t)(maxv / 180.0f) - 1;
+
+    driver->ihold_irun.reg.irun = current_scaling > 31 ? 31 : current_scaling;
+    driver->ihold_irun.reg.ihold = (driver->ihold_irun.reg.irun * driver->config.hold_current_pct) / 100;
 }
 
 void TMC2130_SetDefaults (TMC2130_t *driver)
 {
     memcpy(driver, &tmc2130_defaults, sizeof(TMC2130_t));
+
+    _set_rms_current(driver);
 
     driver->chopconf.reg.mres = tmc_microsteps_to_mres(driver->config.microsteps);
 }
@@ -148,18 +151,14 @@ bool TMC2130_Init (TMC2130_t *driver)
     tmc_spi_read(driver->config.motor, (TMC_spi_datagram_t *)&driver->gstat);
 
     driver->chopconf.reg.mres = tmc_microsteps_to_mres(driver->config.microsteps);
+
     tmc_spi_write(driver->config.motor, (TMC_spi_datagram_t *)&driver->gconf);
-    tmc_spi_write(driver->config.motor, (TMC_spi_datagram_t *)&driver->chopconf);
     tmc_spi_write(driver->config.motor, (TMC_spi_datagram_t *)&driver->coolconf);
     tmc_spi_write(driver->config.motor, (TMC_spi_datagram_t *)&driver->pwmconf);
-    tmc_spi_write(driver->config.motor, (TMC_spi_datagram_t *)&driver->ihold_irun);
     tmc_spi_write(driver->config.motor, (TMC_spi_datagram_t *)&driver->tpowerdown);
     tmc_spi_write(driver->config.motor, (TMC_spi_datagram_t *)&driver->tpwmthrs);
 
     TMC2130_SetCurrent(driver, driver->config.current, driver->config.hold_current_pct);
-
-    //set to a conservative start value
-    //TMC2130_SetConstantOffTimeChopper(driver, 5, 24, 13, 12, true); // move to default values
 
     // Read back chopconf to check if driver is online
     uint32_t chopconf = driver->chopconf.reg.value;
@@ -179,16 +178,7 @@ void TMC2130_SetCurrent (TMC2130_t *driver, uint16_t mA, uint8_t hold_pct)
     driver->config.current = mA;
     driver->config.hold_current_pct = hold_pct;
 
-    float maxv = (((float)(driver->config.r_sense + 20)) * (float)(32UL * driver->config.current)) * 1.41421f / 1000.0f;
-
-    uint8_t current_scaling = (uint8_t)(maxv / 325.0f) - 1;
-
-    // If the current scaling is too low set the vsense bit and recalculate the current setting
-    if ((driver->chopconf.reg.vsense = (current_scaling < 16)))
-        current_scaling = (uint8_t)(maxv / 180.0f) - 1;
-
-    driver->ihold_irun.reg.irun = current_scaling > 31 ? 31 : current_scaling;
-    driver->ihold_irun.reg.ihold = (driver->ihold_irun.reg.irun * driver->config.hold_current_pct) / 100;
+    _set_rms_current(driver);
 
     tmc_spi_write(driver->config.motor, (TMC_spi_datagram_t *)&driver->chopconf);
     tmc_spi_write(driver->config.motor, (TMC_spi_datagram_t *)&driver->ihold_irun);
@@ -246,10 +236,12 @@ void TMC2130_SetConstantOffTimeChopper (TMC2130_t *driver, uint8_t constant_off_
     if (fast_decay_time > 15)
         fast_decay_time = 15;
 
-    set_tfd(&driver->chopconf.reg, fast_decay_time);
+    if(driver->chopconf.reg.chm)
+        driver->chopconf.reg.fd3 = (fast_decay_time & 0x8) >> 3;
 
     driver->chopconf.reg.tbl = blank_time;
     driver->chopconf.reg.toff = constant_off_time < 2 ? 2 : (constant_off_time > 15 ? 15 : constant_off_time);
+    driver->chopconf.reg.hstrt = fast_decay_time & 0x7;
     driver->chopconf.reg.hend = (sine_wave_offset < -3 ? -3 : (sine_wave_offset > 12 ? 12 : sine_wave_offset)) + 3;
     driver->chopconf.reg.rndtf = !use_current_comparator;
 
