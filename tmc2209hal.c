@@ -1,7 +1,7 @@
 /*
  * tmc2209hal.c - interface for Trinamic TMC2209 stepper driver
  *
- * v0.0.4 / 2021-10-16 / (c) Io Engineering / Terje
+ * v0.0.5 / 2021-11-22 / (c) Io Engineering / Terje
  */
 
 /*
@@ -317,13 +317,13 @@ static const tmchal_t tmc_hal = {
     .chopper_timing = chopper_timing
 };
 
-const tmchal_t *TMC2209_AddMotor (motor_map_t motor, uint16_t current, uint8_t microsteps, uint8_t r_sense)
+const tmchal_t *TMC2209_AddMotor (motor_map_t motor, uint8_t address, uint16_t current, uint8_t microsteps, uint8_t r_sense)
 {
     bool ok = !!tmcdriver[motor.id];
 
     if(ok || (ok = (tmcdriver[motor.id] = malloc(sizeof(TMC2209_t))) != NULL)) {
         TMC2209_SetDefaults(tmcdriver[motor.id]);
-        tmcdriver[motor.id]->config.motor.id = motor.id;
+        tmcdriver[motor.id]->config.motor.id = address; // slave address
         tmcdriver[motor.id]->config.motor.axis = motor.axis;
         tmcdriver[motor.id]->config.current = current;
         tmcdriver[motor.id]->config.microsteps = microsteps;
