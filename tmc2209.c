@@ -6,7 +6,7 @@
 
 /*
 
-Copyright (c) 2020-2021, Terje Io
+Copyright (c) 2020-2022, Terje Io
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -272,7 +272,7 @@ bool TMC2209_WriteRegister (TMC2209_t *driver, TMC2209_datagram_t *reg)
     TMC_uart_write_datagram_t datagram;
 
     datagram.msg.sync = 0x05;
-    datagram.msg.slave = driver->config.motor.id;
+    datagram.msg.slave = driver->config.motor.address;
     datagram.msg.addr.value = reg->addr.value;
     datagram.msg.addr.write = 1;
     datagram.msg.payload.value = reg->payload.value;
@@ -296,7 +296,7 @@ bool TMC2209_ReadRegister (TMC2209_t *driver, TMC2209_datagram_t *reg)
     TMC_uart_write_datagram_t *res;
 
     datagram.msg.sync = 0x05;
-    datagram.msg.slave = driver->config.motor.id;
+    datagram.msg.slave = driver->config.motor.address;
     datagram.msg.addr.value = reg->addr.value;
     datagram.msg.addr.write = 0;
     calcCRC(datagram.data, sizeof(TMC_uart_read_datagram_t));

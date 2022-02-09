@@ -6,7 +6,7 @@
 
 /*
 
-Copyright (c) 2021, Terje Io
+Copyright (c) 2021-2022, Terje Io
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -46,10 +46,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define TMC_THRESHOLD_MAX   ((1<<20) - 1)
 
 typedef struct {
-    uint8_t id;     // motor id
-    uint8_t axis;   // axis index
-    uint8_t seq;    // optional motor sequence number (for chained SPI drivers)
-    void *cs_pin;   // optional CS pin data for the stepper driver
+    uint8_t id;         // motor id
+    uint8_t axis;       // axis index
+    uint8_t address;    // UART address
+    uint8_t seq;        // optional motor sequence number (for chained SPI drivers)
+    void *cs_pin;       // optional CS pin data for the stepper driver
 } trinamic_motor_t;
 
 typedef enum {
