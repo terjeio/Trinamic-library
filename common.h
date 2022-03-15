@@ -1,7 +1,7 @@
 /*
  * common.h - shared code for Trinamic drivers
  *
- * v0.0.4 / 2021-10-16 / (c) Io Engineering / Terje
+ * v0.0.5 / 2022-03-14 / (c) Io Engineering / Terje
  */
 
 /*
@@ -45,14 +45,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define TMC_THRESHOLD_MIN   0
 #define TMC_THRESHOLD_MAX   ((1<<20) - 1)
 
-typedef struct {
-    uint8_t id;         // motor id
-    uint8_t axis;       // axis index
-    uint8_t address;    // UART address
-    uint8_t seq;        // optional motor sequence number (for chained SPI drivers)
-    void *cs_pin;       // optional CS pin data for the stepper driver
-} trinamic_motor_t;
-
 typedef enum {
     TMC2209 = 0,
     TMC2130,
@@ -65,6 +57,16 @@ typedef enum {
    TMCMode_StallGuard,
 } trinamic_mode_t;
 
+#pragma pack(push, 1)
+
+typedef struct {
+    uint8_t id;         // motor id
+    uint8_t axis;       // axis index
+    uint8_t address;    // UART address
+    uint8_t seq;        // optional motor sequence number (for chained SPI drivers)
+    void *cs_pin;       // optional CS pin data for the stepper driver
+} trinamic_motor_t;
+
 typedef struct {
     uint32_t f_clk;
     uint16_t microsteps;
@@ -74,8 +76,6 @@ typedef struct {
     trinamic_mode_t mode;
     trinamic_motor_t motor;
 } trinamic_config_t;
-
-#pragma pack(push, 1)
 
 typedef union {
     uint8_t value;
@@ -139,4 +139,3 @@ extern TMC_spi_status_t tmc_spi_read (trinamic_motor_t driver, TMC_spi_datagram_
 
 extern void tmc_uart_write (trinamic_motor_t driver, TMC_uart_write_datagram_t *datagram);
 extern TMC_uart_write_datagram_t *tmc_uart_read (trinamic_motor_t driver, TMC_uart_read_datagram_t *datagram);
-
