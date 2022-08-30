@@ -1,7 +1,7 @@
 /*
  * tmc2209.c - interface for Trinamic TMC2209 stepper driver
  *
- * v0.0.4 / 2021-10-16 / (c) Io Engineering / Terje
+ * v0.0.5 / 2022-08-24 / (c) Io Engineering / Terje
  */
 
 /*
@@ -162,7 +162,7 @@ bool TMC2209_Init (TMC2209_t *driver)
 
     TMC2209_ReadRegister(driver, (TMC2209_datagram_t *)&driver->ifcnt);
 
-    return driver->ifcnt.reg.count - ifcnt == 7;
+    return (((uint8_t)driver->ifcnt.reg.count - ifcnt) & 0xFF) == 7;
 }
 
 uint16_t TMC2209_GetCurrent (TMC2209_t *driver)
