@@ -1,12 +1,12 @@
 /*
  * tmc5160.h - register and message (datagram) descriptors for Trinamic TMC5160 stepper driver
  *
- * v0.0.4 / 2021-12-12 / (c) Io Engineering / Terje
+ * v0.0.4 / 2022-12-22 / (c) Io Engineering / Terje
  */
 
 /*
 
-Copyright (c) 2021, Terje Io
+Copyright (c) 2021-2022, Terje Io
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -765,7 +765,7 @@ typedef struct {
 // -- end of datagrams
 
 typedef union {
-//    uint32_t value;
+    uint32_t value;
     uint8_t data[4];
     TMC5160_gconf_reg_t gconf;
     TMC5160_gstat_reg_t gstat;

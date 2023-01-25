@@ -1,12 +1,12 @@
 /*
  * tmchal.h - HAL interface for Trinamic stepper drivers
  *
- * v0.0.4 / 2021-10-16 / (c) Io Engineering / Terje
+ * v0.0.5 / 2022-12-20 / (c) Io Engineering / Terje
  */
 
 /*
 
-Copyright (c) 2021, Terje Io
+Copyright (c) 2021-2022, Terje Io
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -95,6 +95,7 @@ typedef struct {
     uint8_t hstrt;
     int8_t hend;
     uint8_t tbl;
+    uint8_t toff;
 } TMC_chopper_timing_t;
 
 typedef trinamic_config_t *(*tmc_get_config)(uint8_t motor);
@@ -129,6 +130,9 @@ typedef uint8_t (*tmc_pwm_scale)(uint8_t motor);
 typedef bool (*tmc_vsense)(uint8_t motor);
 typedef void (*tmc_coolconf)(uint8_t motor, TMC_coolconf_t coolconf);
 typedef void (*tmc_chopper_timing)(uint8_t motor, TMC_chopper_timing_t timing);
+typedef bool (*tmc_read_register)(uint8_t motor, uint8_t addr, uint32_t *val);
+typedef bool (*tmc_write_register)(uint8_t motor, uint8_t addr, uint32_t val);
+typedef void *(*tmc_get_register_addr)(uint8_t motor, uint8_t addr);
 
 typedef struct {
     const char *name;
@@ -167,4 +171,7 @@ typedef struct {
     tmc_coolconf coolconf;
     tmc_pwm_scale pwm_scale;
     tmc_chopper_timing chopper_timing;
+    tmc_get_register_addr get_register_addr;
+    tmc_read_register read_register;
+    tmc_write_register write_register;
 } tmchal_t;

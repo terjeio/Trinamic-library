@@ -1,12 +1,12 @@
 /*
  * tmc5160hal.c - interface for Trinamic TMC5160 stepper driver
  *
- * v0.0.4 / 2021-10-16 / (c) Io Engineering / Terje
+ * v0.0.5 / 2022-12-22 / (c) Io Engineering / Terje
  */
 
 /*
 
-Copyright (c) 2021, Terje Io
+Copyright (c) 2021-2022, Terje Io
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -283,6 +283,7 @@ static void chopper_timing (uint8_t motor, TMC_chopper_timing_t timing)
     driver->chopconf.reg.hstrt = timing.hstrt + 1;
     driver->chopconf.reg.hend = timing.hend + 3;
     driver->chopconf.reg.tbl = timing.tbl;
+    driver->chopconf.reg.toff = timing.toff;
     tmc_spi_write(driver->config.motor, (TMC_spi_datagram_t *)&driver->chopconf);
 }
 
@@ -291,6 +292,36 @@ static uint8_t pwm_scale (uint8_t motor)
     tmc_spi_read(tmcdriver[motor]->config.motor, (TMC_spi_datagram_t *)&tmcdriver[motor]->pwm_scale);
 
     return tmcdriver[motor]->pwm_scale.reg.pwm_scale_sum;
+}
+
+static bool read_register (uint8_t motor, uint8_t addr, uint32_t *val)
+{
+    TMC5160_datagram_t reg;
+    reg.addr.reg = (tmc5160_regaddr_t)addr;
+    reg.addr.write = Off;
+
+    TMC5160_ReadRegister(tmcdriver[motor], &reg);
+
+    *val = reg.payload.value;
+
+    return true;
+}
+
+static bool write_register (uint8_t motor, uint8_t addr, uint32_t val)
+{
+    TMC5160_datagram_t reg;
+    reg.addr.reg = (tmc5160_regaddr_t)addr;
+    reg.addr.write = On;
+    reg.payload.value = val;
+
+    TMC5160_WriteRegister(tmcdriver[motor], &reg);
+
+    return true;
+}
+
+static void *get_register_addr (uint8_t motor, uint8_t addr)
+{
+    return TMC5160_GetRegPtr(tmcdriver[motor], (tmc5160_regaddr_t)addr);
 }
 
 static const tmchal_t tmchal = {
@@ -327,7 +358,11 @@ static const tmchal_t tmchal = {
     .get_sg_stall_value = get_sg_stall_value,
     .coolconf = coolconf,
     .pwm_scale = pwm_scale,
-    .chopper_timing = chopper_timing
+    .chopper_timing = chopper_timing,
+
+    .get_register_addr = get_register_addr,
+    .read_register = read_register,
+    .write_register = write_register
 };
 
 const tmchal_t *TMC5160_AddMotor (motor_map_t motor, uint16_t current, uint8_t microsteps, uint8_t r_sense)

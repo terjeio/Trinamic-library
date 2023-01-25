@@ -1,12 +1,12 @@
 /*
  * tmc2130hal.c - interface for Trinamic TMC2130 stepper driver
  *
- * v0.0.4 / 2021-10-16 / (c) Io Engineering / Terje
+ * v0.0.5 / 2022-12-22 / (c) Io Engineering / Terje
  */
 
 /*
 
-Copyright (c) 2021, Terje Io
+Copyright (c) 2021-2022, Terje Io
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -275,6 +275,7 @@ static void chopper_timing (uint8_t motor, TMC_chopper_timing_t timing)
     driver->chopconf.reg.hstrt = timing.hstrt + 1;
     driver->chopconf.reg.hend = timing.hend + 3;
     driver->chopconf.reg.tbl = timing.tbl;
+    driver->chopconf.reg.toff = timing.toff;
     tmc_spi_write(driver->config.motor, (TMC_spi_datagram_t *)&driver->chopconf);
 }
 
@@ -290,6 +291,36 @@ static bool vsense (uint8_t motor)
     tmc_spi_read(tmcdriver[motor]->config.motor, (TMC_spi_datagram_t *)&tmcdriver[motor]->chopconf);
 
     return tmcdriver[motor]->chopconf.reg.vsense;
+}
+
+static bool read_register (uint8_t motor, uint8_t addr, uint32_t *val)
+{
+    TMC2130_datagram_t reg;
+    reg.addr.reg = (tmc2130_regaddr_t)addr;
+    reg.addr.write = Off;
+
+    TMC2130_ReadRegister(tmcdriver[motor], &reg);
+
+    *val = reg.payload.value;
+
+    return true;
+}
+
+static bool write_register (uint8_t motor, uint8_t addr, uint32_t val)
+{
+    TMC2130_datagram_t reg;
+    reg.addr.reg = (tmc2130_regaddr_t)addr;
+    reg.addr.write = On;
+    reg.payload.value = val;
+
+    TMC2130_WriteRegister(tmcdriver[motor], &reg);
+
+    return true;
+}
+
+static void *get_register_addr (uint8_t motor, uint8_t addr)
+{
+    return TMC2130_GetRegPtr(tmcdriver[motor], (tmc2130_regaddr_t)addr);
 }
 
 static const tmchal_t tmchal = {
@@ -327,7 +358,11 @@ static const tmchal_t tmchal = {
     .coolconf = coolconf,
     .vsense = vsense,
     .pwm_scale = pwm_scale,
-    .chopper_timing = chopper_timing
+    .chopper_timing = chopper_timing,
+
+    .get_register_addr = get_register_addr,
+    .read_register = read_register,
+    .write_register = write_register
 };
 
 const tmchal_t *TMC2130_AddMotor (motor_map_t motor, uint16_t current, uint8_t microsteps, uint8_t r_sense)
