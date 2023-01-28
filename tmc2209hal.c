@@ -1,7 +1,7 @@
 /*
  * tmc2209hal.c - interface for Trinamic TMC2209 stepper driver
  *
- * v0.0.7 / 2022-12-22 / (c) Io Engineering / Terje
+ * v0.0.8 / 2023-01-28 / (c) Io Engineering / Terje
  */
 
 /*
@@ -159,7 +159,7 @@ static void stallGuardEnable (uint8_t motor, float feed_rate, float steps_mm, in
     driver->gconf.reg.en_spreadcycle = false; // stealthChop on
     TMC2209_WriteRegister(driver, (TMC2209_datagram_t *)&driver->gconf);
 
-    driver->pwmconf.reg.pwm_autoscale = false;
+    driver->pwmconf.reg.pwm_autoscale = true;
     TMC2209_WriteRegister(driver, (TMC2209_datagram_t *)&driver->pwmconf);
 
     TMC2209_SetTCOOLTHRS(driver, feed_rate / (60.0f * 1.5f), steps_mm);
