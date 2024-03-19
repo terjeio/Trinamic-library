@@ -1,12 +1,12 @@
 /*
  * tmc2130.c - interface for Trinamic TMC2130 stepper driver
  *
- * v0.0.7 / 2021-10-17 / (c) Io Engineering / Terje
+ * v0.0.8 / 2024-03-03
  */
 
 /*
 
-Copyright (c) 2018-2021, Terje Io
+Copyright (c) 2018-2024, Terje Io
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -46,6 +46,39 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "tmc2130.h"
 
+static const trinamic_cfg_params_t cfg_params = {
+
+    .cap.drvconf = 0,
+
+    .cap.coolconf.seup = 0b11,
+    .cap.coolconf.sedn = 0b11,
+    .cap.coolconf.semax = 0b1111,
+    .cap.coolconf.semin = 0b1111,
+    .cap.coolconf.seimin = 1,
+
+    .cap.chopconf.toff = 0b1111,
+    .cap.chopconf.hstrt = 0b111,
+    .cap.chopconf.hend = 0b1111,
+    .cap.chopconf.rndtf = 1,
+    .cap.chopconf.chm = 1,
+    .cap.chopconf.tbl = 0b11,
+
+    .dflt.drvconf = 0,
+
+    .dflt.coolconf.seup = TMC2130_SEUP,
+    .dflt.coolconf.sedn = TMC2130_SEDN,
+    .dflt.coolconf.semax = TMC2130_SEMAX,
+    .dflt.coolconf.semin = TMC2130_SEMIN,
+    .dflt.coolconf.seimin = TMC2130_SEIMIN,
+
+    .dflt.chopconf.toff = TMC2130_TOFF,
+    .dflt.chopconf.hstrt = TMC2130_HSTRT - 1,
+    .dflt.chopconf.hend = TMC2130_HEND + 3,
+    .dflt.chopconf.rndtf = TMC2130_RNDTF,
+    .dflt.chopconf.chm = TMC2130_CHM,
+    .dflt.chopconf.tbl = TMC2130_TBL
+};
+
 static const TMC2130_t tmc2130_defaults = {
     .config.f_clk = TMC2130_F_CLK,
     .config.mode = TMC2130_MODE,
@@ -75,11 +108,11 @@ static const TMC2130_t tmc2130_defaults = {
     .chopconf.addr.reg = TMC2130Reg_CHOPCONF,
     .chopconf.reg.intpol = TMC2130_INTPOL,
     .chopconf.reg.toff = TMC2130_TOFF,
-    .chopconf.reg.chm = TMC2130_CHOPPER_MODE,
+    .chopconf.reg.chm = TMC2130_CHM,
     .chopconf.reg.tbl = TMC2130_TBL,
     .chopconf.reg.rndtf = TMC2130_RNDTF,
     .chopconf.reg.hend = TMC2130_HEND + 3,
-#if TMC2130_CHOPPER_MODE == 0
+#if TMC2130_CHM == 0
     .chopconf.reg.hstrt = TMC2130_HSTRT - 1,
 #else
     .chopconf.reg.fd3 = (TMC2130_TFD & 0x08) >> 3,
@@ -116,6 +149,11 @@ static const TMC2130_t tmc2130_defaults = {
 #endif
 
 };
+
+const trinamic_cfg_params_t *TMC2130_GetConfigDefaults (void)
+{
+    return &cfg_params;
+}
 
 static void _set_rms_current (TMC2130_t *driver)
 {

@@ -1,12 +1,12 @@
 /*
  * tmc2209.c - interface for Trinamic TMC2209 stepper driver
  *
- * v0.0.5 / 2022-08-24 / (c) Io Engineering / Terje
+ * v0.0.6 / 2024-03-03
  */
 
 /*
 
-Copyright (c) 2020-2022, Terje Io
+Copyright (c) 2020-2024, Terje Io
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -46,6 +46,37 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "tmc2209.h"
 
+static const trinamic_cfg_params_t cfg_params = {
+
+    .cap.drvconf = 0,
+
+    .cap.coolconf.seup = 0b11,
+    .cap.coolconf.sedn = 0b11,
+    .cap.coolconf.semax = 0b1111,
+    .cap.coolconf.semin = 0b1111,
+    .cap.coolconf.seimin = 1,
+
+    .cap.chopconf.toff = 0b1111,
+    .cap.chopconf.hstrt = 0b111,
+    .cap.chopconf.hend = 0b1111,
+    .cap.chopconf.rndtf = 1,
+    .cap.chopconf.intpol = 1,
+    .cap.chopconf.tbl = 0b11,
+
+    .dflt.drvconf = 0,
+
+    .dflt.coolconf.seup = TMC2209_SEUP,
+    .dflt.coolconf.sedn = TMC2209_SEDN,
+    .dflt.coolconf.semax = TMC2209_SEMAX,
+    .dflt.coolconf.semin = TMC2209_SEMIN,
+    .dflt.coolconf.seimin = TMC2209_SEIMIN,
+
+    .dflt.chopconf.toff = TMC2209_TOFF,
+    .dflt.chopconf.hstrt = TMC2209_HSTRT - 1,
+    .dflt.chopconf.hend = TMC2209_HEND + 3,
+    .dflt.chopconf.intpol = TMC2209_INTPOL,
+    .dflt.chopconf.tbl = TMC2209_TBL
+};
 
 static const TMC2209_t tmc2209_defaults = {
     .config.f_clk = TMC2209_F_CLK,
@@ -117,6 +148,11 @@ static void _set_rms_current (TMC2209_t *driver)
     driver->ihold_irun.reg.ihold = (driver->ihold_irun.reg.irun * driver->config.hold_current_pct) / 100;
 
 //?    driver->coolconf.reg.seimin = driver->ihold_irun.reg.irun >= 20;
+}
+
+const trinamic_cfg_params_t *TMC2209_GetConfigDefaults (void)
+{
+    return &cfg_params;
 }
 
 void TMC2209_SetDefaults (TMC2209_t *driver)
@@ -287,7 +323,6 @@ bool TMC2209_WriteRegister (TMC2209_t *driver, TMC2209_datagram_t *reg)
 
     return true;
 }
-
 
 bool TMC2209_ReadRegister (TMC2209_t *driver, TMC2209_datagram_t *reg)
 {

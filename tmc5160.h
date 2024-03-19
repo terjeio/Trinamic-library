@@ -1,12 +1,12 @@
 /*
  * tmc5160.h - register and message (datagram) descriptors for Trinamic TMC5160 stepper driver
  *
- * v0.0.4 / 2022-12-22 / (c) Io Engineering / Terje
+ * v0.0.5 / 2024-03-03
  */
 
 /*
 
-Copyright (c) 2021-2022, Terje Io
+Copyright (c) 2021-2024, Terje Io
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -68,15 +68,16 @@ typedef enum {
 #define TMC5160_HOLD_CURRENT_PCT    50
 
 // CHOPCONF
-#define TMC5160_INTERPOLATE         1   // intpol: 0 = off, 1 = on
-#define TMC5160_CONSTANT_OFF_TIME   5   // toff: 1 - 15
-#define TMC5160_BLANK_TIME          1   // tbl: 0 = 16, 1 = 24, 2 = 36, 3 = 54 clocks
-#define TMC5160_CHOPPER_MODE        0   // chm: 0 = spreadCycle, 1 = constant off time
-// TMC5160_CHOPPER_MODE 0 defaults
-#define TMC5160_HSTRT               3   // hstrt: 0 - 7
-#define TMC5160_HEND                2   // hend: -3 - 12
-// TMC5160_CHOPPER_MODE 1 defaults
-#define TMC2130_TFD                 13  // fd3 & hstrt: 0 - 15
+#define TMC5160_INTPOL              1   // Step interpolation: 0 = off, 1 = on
+#define TMC5160_TOFF                5   // Off time: 1 - 15, 0 = MOSFET disable (8)
+#define TMC5160_TBL                 1   // Blanking time: 0 = 16, 1 = 24, 2 = 36, 3 = 54 clocks
+#define TMC5160_CHM                 0   // Chopper mode: 0 = spreadCycle, 1 = constant off time
+// TMC5160_CHM 0 defaults
+#define TMC5160_HSTRT               6   // Hysteresis start: 1 - 8
+#define TMC5160_HEND                2   // Hysteresis end: -3 - 12
+#define TMC5160_HMAX               16   // HSTRT + HEND
+// TMC5160_CHM 1 defaults
+#define TMC5160_TFD                 13  // fd3 & hstrt: 0 - 15
 
 // IHOLD_IRUN
 #define TMC5160_IHOLDDELAY          6
@@ -835,6 +836,7 @@ typedef struct {
 
 bool TMC5160_Init(TMC5160_t *driver);
 void TMC5160_SetDefaults (TMC5160_t *driver);
+const trinamic_cfg_params_t *TMC5160_GetConfigDefaults (void);
 void TMC5160_SetCurrent (TMC5160_t *driver, uint16_t mA, uint8_t hold_pct);
 uint16_t TMC5160_GetCurrent (TMC5160_t *driver);
 bool TMC5160_MicrostepsIsValid (uint16_t usteps);

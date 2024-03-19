@@ -1,12 +1,12 @@
 /*
  * common.h - shared code for Trinamic drivers
  *
- * v0.0.5 / 2022-03-14 / (c) Io Engineering / Terje
+ * v0.0.6 / 2024-03-03
  */
 
 /*
 
-Copyright (c) 2021-2022, Terje Io
+Copyright (c) 2021-2024, Terje Io
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -45,10 +45,54 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define TMC_THRESHOLD_MIN   0
 #define TMC_THRESHOLD_MAX   ((1<<20) - 1)
 
+typedef union {
+    uint32_t value;
+    struct {
+        uint32_t
+        cs :5,
+        seup: 2,
+        sedn: 2,
+        semax: 4,
+        semin: 4,
+        seimin :1;
+    };
+} trinamic_coolconf_t;
+
+typedef union {
+    uint32_t value;
+    struct {
+        uint32_t
+        toff            :4,
+        hstrt           :3,
+        hend            :4,
+        hdec            :2,
+        rndtf           :1,
+        chm             :1,
+        tbl             :2,
+        tfd             :4,
+        intpol          :1;
+    };
+} trinamic_chopconf_t;
+
+typedef uint32_t trinamic_drvconf_t;
+
+typedef struct {
+    trinamic_drvconf_t drvconf;
+    trinamic_coolconf_t coolconf;
+    trinamic_chopconf_t chopconf;
+} trinamic_cfg_t;
+
+typedef struct {
+     trinamic_cfg_t cap;
+     trinamic_cfg_t dflt;
+} trinamic_cfg_params_t;
+
 typedef enum {
     TMC2209 = 0,
     TMC2130,
-    TMC5160
+    TMC5160,
+    TMC2660,
+    TMCNULL
 } trinamic_driver_t;
 
 typedef enum {
@@ -75,6 +119,7 @@ typedef struct {
     uint8_t hold_current_pct;   // percent
     trinamic_mode_t mode;
     trinamic_motor_t motor;
+    const trinamic_cfg_params_t *cfg_params;
 } trinamic_config_t;
 
 typedef union {
@@ -95,6 +140,15 @@ typedef struct {
     TMC_addr_t addr;
     TMC_payload_t payload;
 } TMC_spi_datagram_t;
+
+typedef union {
+    uint32_t value;
+    uint8_t data[3];
+    struct {
+        uint32_t
+        payload :20;
+    };
+} TMC_spi20_datagram_t;
 
 typedef union {
     uint8_t data[8];
@@ -136,6 +190,9 @@ uint8_t tmc_motors_get (void);
 
 extern TMC_spi_status_t tmc_spi_write (trinamic_motor_t driver, TMC_spi_datagram_t *datagram);
 extern TMC_spi_status_t tmc_spi_read (trinamic_motor_t driver, TMC_spi_datagram_t *datagram);
+
+extern TMC_spi20_datagram_t tmc_spi20_write (trinamic_motor_t driver, TMC_spi20_datagram_t *datagram);
+extern TMC_spi20_datagram_t tmc_spi20_read (trinamic_motor_t driver, TMC_spi20_datagram_t *datagram);
 
 extern void tmc_uart_write (trinamic_motor_t driver, TMC_uart_write_datagram_t *datagram);
 extern TMC_uart_write_datagram_t *tmc_uart_read (trinamic_motor_t driver, TMC_uart_read_datagram_t *datagram);

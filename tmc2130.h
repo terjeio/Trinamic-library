@@ -1,12 +1,12 @@
 /*
  * tmc2130.h - register and message (datagram) descriptors for Trinamic TMC2130 stepper driver
  *
- * v0.0.7 / 2021-12-12 / (c) Io Engineering / Terje
+ * v0.0.8 / 2024-03-03
  */
 
 /*
 
-Copyright (c) 2018-2021, Terje Io
+Copyright (c) 2018-2024, Terje Io
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -39,9 +39,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef _TRINAMIC2130_H_
 #define _TRINAMIC2130_H_
 
-#include <stdint.h>
-#include <stdbool.h>
-
 #include "common.h"
 
 //#define TMC2130_COMPLETE // comment out for minimum set of registers
@@ -71,16 +68,17 @@ typedef enum {
 #define TMC2130_HOLD_CURRENT_PCT    50
 
 // CHOPCONF
-#define TMC2130_INTPOL              1   // intpol: 0 = off, 1 = on
-#define TMC2130_TOFF                5   // toff: 1 - 15
-#define TMC2130_TBL                 1   // tbl: 0 = 16, 1 = 24, 2 = 36, 3 = 54 clocks
-#define TMC2130_RNDTF               1   // rndtf: 0 = fixed, 1 = random
-#define TMC2130_CHOPPER_MODE        0   // chm: 0 = spreadCycle, 1 = constant off time
-#define TMC2130_HEND                2   // hend or offset: -3 - 12
-// TMC2130_CHOPPER_MODE 0 defaults
-#define TMC2130_HSTRT               3   // hstrt: 0 - 7
-// TMC2130_CHOPPER_MODE 1 defaults
-#define TMC2130_TFD                 13  // fd3 & hstrt: 0 - 15
+#define TMC2130_INTPOL              1   // Step interpolation: 0 = off, 1 = on
+#define TMC2130_TOFF                5   // Off time: 1 - 15, 0 = MOSFET disable
+#define TMC2130_TBL                 1   // Blanking time: 0 = 16, 1 = 24, 2 = 36, 3 = 54 clocks
+#define TMC2130_RNDTF               1   // Random TOFF time: 0 = fixed, 1 = random
+#define TMC2130_CHM                 1   // Chopper mode: 0 = spreadCycle, 1 = constant off time
+#define TMC2130_HEND                2   // Hysteresis end or offset: -3 - 12
+// TMC2130_CHM 0 defaults
+#define TMC2130_HSTRT               3   // Hysteresis start: 1 - 8
+#define TMC2130_HMAX               16   // HSTRT + HEND
+// TMC2130_CHM 1 defaults
+#define TMC2130_TFD                13   // fd3 & hstrt: 0 - 15
 
 // IHOLD_IRUN
 #define TMC2130_IHOLDDELAY          6
@@ -94,7 +92,7 @@ typedef enum {
 // PWMCONF - StealthChop defaults
 #define TMC2130_PWM_FREQ            1   // 0 = 1/1024, 1 = 2/683, 2 = 2/512, 3 = 2/410 fCLK
 #define TMC2130_PWM_AMPL            255 // 0 - 255
-#define TMC2130_PWM_GRAD            5  // 0 - 255
+#define TMC2130_PWM_GRAD            5   // 0 - 255
 
 // TCOOLTHRS
 #define TMC2130_COOLSTEP_THRS       TMC_THRESHOLD_MIN   // tpwmthrs: 0 - 2^20 - 1 (20 bits)
@@ -699,6 +697,7 @@ typedef struct {
 
 bool TMC2130_Init(TMC2130_t *driver);
 void TMC2130_SetDefaults (TMC2130_t *driver);
+const trinamic_cfg_params_t *TMC2130_GetConfigDefaults (void);
 void TMC2130_SetCurrent (TMC2130_t *driver, uint16_t mA, uint8_t hold_pct);
 uint16_t TMC2130_GetCurrent (TMC2130_t *driver);
 void TMC2130_SetTPWMTHRS (TMC2130_t *driver, float mm_sec, float steps_mm);

@@ -1,12 +1,12 @@
 /*
  * tmc2209hal.h - interface for Trinamic TMC2209 stepper driver
  *
- * v0.0.5 / 2021-11-22 / (c) Io Engineering / Terje
+ * v0.0.5 / 2024-03-03
  */
 
 /*
 
-Copyright (c) 2021, Terje Io
+Copyright (c) 2023-2024, Terje Io
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -40,7 +40,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define _TMC2209HAL_H_
 
 #include "tmchal.h"
-#include "grbl/hal.h"
 
 const tmchal_t *TMC2209_AddMotor (motor_map_t motor, uint8_t address, uint16_t current, uint8_t microsteps, uint8_t r_sense);
 

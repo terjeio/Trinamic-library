@@ -1,12 +1,12 @@
 /*
  * tmc5160.c - interface for Trinamic TMC5160 stepper driver
  *
- * v0.0.3 / 2021-10-17 / (c) Io Engineering / Terje
+ * v0.0.5 / 2024-03-03
  */
 
 /*
 
-Copyright (c) 2021, Terje Io
+Copyright (c) 2021-2024, Terje Io
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -46,6 +46,39 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "tmc5160.h"
 
+static const trinamic_cfg_params_t cfg_params = {
+
+    .cap.drvconf = 0,
+
+    .cap.coolconf.seup = 0b11,
+    .cap.coolconf.sedn = 0b11,
+    .cap.coolconf.semax = 0b1111,
+    .cap.coolconf.semin = 0b1111,
+    .cap.coolconf.seimin = 1,
+
+    .cap.chopconf.toff = 0b1111,
+    .cap.chopconf.hstrt = 0b111,
+    .cap.chopconf.hend = 0b1111,
+    .cap.chopconf.rndtf = 1,
+    .cap.chopconf.intpol = 1,
+    .cap.chopconf.tbl = 0b11,
+
+    .dflt.drvconf = 0,
+
+    .dflt.coolconf.seup = TMC5160_SEUP,
+    .dflt.coolconf.sedn = TMC5160_SEDN,
+    .dflt.coolconf.semax = TMC5160_SEMAX,
+    .dflt.coolconf.semin = TMC5160_SEMIN,
+    .dflt.coolconf.seimin = TMC5160_SEIMIN,
+
+    .dflt.chopconf.toff = TMC5160_TOFF,
+    .dflt.chopconf.hstrt = TMC5160_HSTRT - 1,
+    .dflt.chopconf.hend = TMC5160_HEND + 3,
+    .dflt.chopconf.intpol = TMC5160_INTPOL,
+    .dflt.chopconf.tfd = TMC5160_TFD,
+    .dflt.chopconf.tbl = TMC5160_TBL
+};
+
 static const TMC5160_t tmc5160_defaults = {
     .config.f_clk = TMC5160_F_CLK,
     .config.mode = TMC5160_MODE,
@@ -74,16 +107,16 @@ static const TMC5160_t tmc5160_defaults = {
     .mscnt.addr.reg = TMC5160Reg_MSCNT,
     .mscuract.addr.reg = TMC5160Reg_MSCURACT,
     .chopconf.addr.reg = TMC5160Reg_CHOPCONF,
-    .chopconf.reg.intpol = TMC5160_INTERPOLATE,
-    .chopconf.reg.toff = TMC5160_CONSTANT_OFF_TIME,
-    .chopconf.reg.chm = TMC5160_CHOPPER_MODE,
-    .chopconf.reg.tbl = TMC5160_BLANK_TIME,
-    .chopconf.reg.hend = TMC5160_HEND,
-#if TMC5160_CHOPPER_MODE == 0
-    .chopconf.reg.hstrt = TMC5160_HSTRT,
+    .chopconf.reg.intpol = TMC5160_INTPOL,
+    .chopconf.reg.toff = TMC5160_TOFF,
+    .chopconf.reg.chm = TMC5160_CHM,
+    .chopconf.reg.tbl = TMC5160_TBL,
+    .chopconf.reg.hend = TMC5160_HEND + 3,
+#if TMC5160_CHM == 0
+    .chopconf.reg.hstrt = TMC5160_HSTRT - 1,
 #else
-    .chopconf.reg.fd3 = (TMC2130_TFD & 0x08) >> 3,
-    .chopconf.reg.hstrt = TMC2130_TFD & 0x07,
+    .chopconf.reg.fd3 = (TMC5160_TFD & 0x08) >> 3,
+    .chopconf.reg.hstrt = TMC5160_TFD & 0x07,
 #endif
     .coolconf.addr.reg = TMC5160Reg_COOLCONF,
     .coolconf.reg.semin = TMC5160_SEMIN,
@@ -145,6 +178,11 @@ static void _set_rms_current (TMC5160_t *driver)
     driver->global_scaler.reg.scaler = scaler;
     driver->ihold_irun.reg.irun = CS > 31 ? 31 : CS;
     driver->ihold_irun.reg.ihold = (driver->ihold_irun.reg.irun * driver->config.hold_current_pct) / 100;
+}
+
+const trinamic_cfg_params_t *TMC5160_GetConfigDefaults (void)
+{
+    return &cfg_params;
 }
 
 void TMC5160_SetDefaults (TMC5160_t *driver)

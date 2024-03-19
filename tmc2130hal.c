@@ -1,12 +1,12 @@
 /*
  * tmc2130hal.c - interface for Trinamic TMC2130 stepper driver
  *
- * v0.0.5 / 2022-12-22 / (c) Io Engineering / Terje
+ * v0.0.6 / 2024-03-03
  */
 
 /*
 
-Copyright (c) 2021-2022, Terje Io
+Copyright (c) 2021-2024, Terje Io
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -255,27 +255,29 @@ static int16_t get_sg_stall_value (uint8_t motor)
     return (int16_t)(tmcdriver[motor]->coolconf.reg.sgt & 0x40 ? tmcdriver[motor]->coolconf.reg.sgt | 0xFF80 : tmcdriver[motor]->coolconf.reg.sgt);
 }
 
-static void coolconf (uint8_t motor, TMC_coolconf_t coolconf)
+static void coolconf (uint8_t motor, trinamic_coolconf_t coolconf)
 {
     TMC2130_t *driver = tmcdriver[motor];
 
     driver->coolconf.reg.semin = coolconf.semin;
     driver->coolconf.reg.semax = coolconf.semax;
     driver->coolconf.reg.sedn = coolconf.sedn;
+    driver->coolconf.reg.seimin = coolconf.seimin;
+    driver->coolconf.reg.seup = coolconf.seup;
     tmc_spi_write(driver->config.motor, (TMC_spi_datagram_t *)&driver->coolconf);
 }
 
 // chopconf
 
-static void chopper_timing (uint8_t motor, TMC_chopper_timing_t timing)
+static void chopper_timing (uint8_t motor, trinamic_chopconf_t chopconf)
 {
     TMC2130_t *driver = tmcdriver[motor];
 
-    driver->chopconf.reg.chm = 0;
-    driver->chopconf.reg.hstrt = timing.hstrt + 1;
-    driver->chopconf.reg.hend = timing.hend + 3;
-    driver->chopconf.reg.tbl = timing.tbl;
-    driver->chopconf.reg.toff = timing.toff;
+    driver->chopconf.reg.chm = chopconf.chm;
+    driver->chopconf.reg.hstrt = chopconf.hstrt;
+    driver->chopconf.reg.hend = chopconf.hend;
+    driver->chopconf.reg.tbl = chopconf.tbl;
+    driver->chopconf.reg.toff = chopconf.toff;
     tmc_spi_write(driver->config.motor, (TMC_spi_datagram_t *)&driver->chopconf);
 }
 
