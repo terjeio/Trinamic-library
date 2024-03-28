@@ -76,7 +76,7 @@ typedef enum {
 #define TMC2660_CHM                 0   // Chopper mode: 0 = spreadCycle, 1 = constant off time
 #define TMC2660_HSTRT               3   // Hysteresis start: 1 - 8
 #define TMC2660_HEND                5   // Hysteresis end: -3 - 12
-#define TMC2209_HMAX               15   // HSTRT + HEND
+#define TMC2660_HMAX               15   // HSTRT + HEND
 #define TMC2660_HDEC                0   // Hysteresis decrement: 0 = 16, 1 = 32, 2 = 48, 3 = 64 clocks
 #define TMC2660_RNDTF               1   // Random TOFF time
 
