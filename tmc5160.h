@@ -60,11 +60,11 @@ typedef enum {
 // default values
 
 // General
-#define TMC5160_F_CLK               12000000UL  // factory tuned to 12MHz - see datasheet for calibration procedure if required
-#define TMC5160_MODE                0           // 0 = TMCMode_StealthChop, 1 = TMCMode_CoolStep, 3 = TMCMode_StallGuard
+#define TMC5160_F_CLK               12000000UL              // factory tuned to 12MHz - see datasheet for calibration procedure if required
+#define TMC5160_MODE                TMCMode_StealthChop     // 0 = TMCMode_StealthChop, 1 = TMCMode_CoolStep, 3 = TMCMode_StallGuard
 #define TMC5160_MICROSTEPS          TMC5160_Microsteps_4
-#define TMC5160_R_SENSE             75          // mOhm
-#define TMC5160_CURRENT             500         // mA RMS
+#define TMC5160_R_SENSE             75                      // mOhm
+#define TMC5160_CURRENT             500                     // mA RMS
 #define TMC5160_HOLD_CURRENT_PCT    50
 
 // CHOPCONF

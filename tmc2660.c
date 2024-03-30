@@ -1,7 +1,7 @@
 /*
  * tmc2660.c - interface for Trinamic TMC2660 stepper driver
  *
- * v0.0.1 / 2024-03-03
+ * v0.0.1 / 2024-03-30
  */
 
 /*
@@ -167,11 +167,11 @@ bool TMC2660_Init (TMC2660_t *driver)
     return true;
 }
 
-uint_fast16_t cs2rms_2660 (TMC2660_t *driver, uint8_t CS)
+uint_fast16_t cs2rms_2660 (TMC2660_t *driver, uint8_t cs)
 {
     float v_sense = driver->drvconf.vsense ? 165.0f : 325.0f;
     
-    float iRMS = (248.0f / 256.0f) * (((float)CS + 1.0f) / 32.0f) * (v_sense / (float)driver->config.r_sense) * (1.0f / sqrt(2.0f));
+    float iRMS = (248.0f / 256.0f) * (((float)cs + 1.0f) / 32.0f) * (v_sense / (float)driver->config.r_sense) * (1.0f / sqrt(2.0f));
 
     return (uint_fast16_t)(iRMS * 1000.0f);
 

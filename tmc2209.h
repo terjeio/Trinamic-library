@@ -61,11 +61,11 @@ typedef enum {
 // default values
 
 // General
-#define TMC2209_F_CLK               12000000UL  // factory tuned to 12MHz - see datasheet for calibration procedure if required
-#define TMC2209_MODE                0           // 0 = TMCMode_StealthChop, 1 = TMCMode_CoolStep, 3 = TMCMode_StallGuard
+#define TMC2209_F_CLK               12000000UL              // factory tuned to 12MHz - see datasheet for calibration procedure if required
+#define TMC2209_MODE                TMCMode_StealthChop     // 0 = TMCMode_StealthChop, 1 = TMCMode_CoolStep, 3 = TMCMode_StallGuard
 #define TMC2209_MICROSTEPS          TMC2209_Microsteps_4
-#define TMC2209_R_SENSE             110         // mOhm
-#define TMC2209_CURRENT             500         // mA RMS
+#define TMC2209_R_SENSE             110                     // mOhm
+#define TMC2209_CURRENT             500                     // mA RMS
 #define TMC2209_HOLD_CURRENT_PCT    50
 
 // CHOPCONF
