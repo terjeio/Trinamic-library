@@ -1,7 +1,7 @@
 /*
  * tmc2660hal.h - interface for Trinamic TMC2660 stepper driver
  *
- * v0.0.1 / 2024-03-03
+ * v0.0.1 / 2024-04-15
  */
 
 /*
@@ -40,8 +40,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef _TMC2660HAL_H_
 #define _TMC2660HAL_H_
 
-#include "tmchal.h"
 #include "tmc2660.h"
+#include "tmchal.h"
 
 const tmchal_t *TMC2660_AddMotor (motor_map_t motor, uint16_t current, uint8_t microsteps, uint8_t r_sense);
 
