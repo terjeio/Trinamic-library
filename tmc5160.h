@@ -121,7 +121,7 @@ typedef enum {
 
 typedef uint8_t tmc5160_regaddr_t;
 
-enum tmc5160_regaddr_t {
+enum tmc5160_regaddr {
     TMC5160Reg_GCONF            = 0x00,
     TMC5160Reg_GSTAT            = 0x01,
     TMC5160Reg_IFCNT            = 0x02,

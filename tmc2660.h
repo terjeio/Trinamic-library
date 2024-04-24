@@ -104,7 +104,7 @@ typedef enum {
 typedef uint8_t tmc2660_regaddr_t;
 
 //adresses are 3 bits.
-enum tmc2660_regaddr_t {
+enum tmc2660_regaddr {
     TMC2660Reg_DRVCTRL  = 0b000, // only ever going to use step/dir mode.
     TMC2660Reg_CHOPCONF = 0b100,
     TMC2660Reg_SMARTEN  = 0b101, // Coolstep control register.
