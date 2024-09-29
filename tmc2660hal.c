@@ -1,7 +1,7 @@
 /*
  * tmc2660hal.c - interface for Trinamic TMC2660 stepper driver
  *
- * v0.0.1 / 2024-03-03
+ * v0.0.2 / 2024-09-28
  */
 
 /*
@@ -68,9 +68,9 @@ static void setCurrent (uint8_t motor, uint16_t mA, uint8_t hold_pct)
     TMC2660_SetCurrent(tmcdriver[motor], mA, hold_pct);
 }
 
-static uint16_t getCurrent (uint8_t motor)
+static uint16_t getCurrent (uint8_t motor, trinamic_current_t type)
 {
-    return TMC2660_GetCurrent(tmcdriver[motor]);
+    return TMC2660_GetCurrent(tmcdriver[motor], type);
 }
 
 static TMC_chopconf_t getChopconf (uint8_t motor)

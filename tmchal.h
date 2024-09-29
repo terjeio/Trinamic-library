@@ -1,7 +1,7 @@
 /*
  * tmchal.h - HAL interface for Trinamic stepper drivers
  *
- * v0.0.6 / 2024-03-03
+ * v0.0.7 / 2024-09-28
  */
 
 /*
@@ -102,7 +102,7 @@ typedef trinamic_config_t *(*tmc_get_config)(uint8_t motor);
 typedef bool (*tmc_microsteps_isvalid)(uint8_t motor, uint16_t microsteps);
 typedef void (*tmc_set_microsteps)(uint8_t motor, uint16_t microsteps);
 typedef void (*tmc_set_current)(uint8_t motor, uint16_t mA, uint8_t hold_pct);
-typedef uint16_t (*tmc_get_current)(uint8_t motor);
+typedef uint16_t (*tmc_get_current)(uint8_t motor, trinamic_current_t type);
 typedef TMC_chopconf_t (*tmc_get_chopconf)(uint8_t motor);
 typedef uint32_t (*tmc_get_tstep)(uint8_t motor);
 typedef TMC_drv_status_t (*tmc_get_drv_status)(uint8_t motor);

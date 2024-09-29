@@ -1,7 +1,7 @@
 /*
  * tmc2209.h - register and message (datagram) descriptors for Trinamic TMC2209 stepper driver
  *
- * v0.0.5 / 2024-03-03
+ * v0.0.7 / 2024-09-28
  */
 
 /*
@@ -717,7 +717,7 @@ bool TMC2209_Init(TMC2209_t *driver);
 void TMC2209_SetDefaults (TMC2209_t *driver);
 const trinamic_cfg_params_t *TMC2209_GetConfigDefaults (void);
 void TMC2209_SetCurrent (TMC2209_t *driver, uint16_t mA, uint8_t hold_pct);
-uint16_t TMC2209_GetCurrent (TMC2209_t *driver);
+uint16_t TMC2209_GetCurrent (TMC2209_t *driver, trinamic_current_t type);
 float TMC2209_GetTPWMTHRS (TMC2209_t *driver, float steps_mm);
 void TMC2209_SetTPWMTHRS (TMC2209_t *driver, float mm_sec, float steps_mm);
 bool TMC2209_MicrostepsIsValid (uint16_t usteps);

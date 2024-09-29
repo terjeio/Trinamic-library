@@ -1,7 +1,7 @@
 /*
  * tmc2130hal.c - interface for Trinamic TMC2130 stepper driver
  *
- * v0.0.6 / 2024-03-03
+ * v0.0.7 / 2024-09-28
  */
 
 /*
@@ -66,9 +66,9 @@ static void setCurrent (uint8_t motor, uint16_t mA, uint8_t hold_pct)
     TMC2130_SetCurrent(tmcdriver[motor], mA, hold_pct);
 }
 
-static uint16_t getCurrent (uint8_t motor)
+static uint16_t getCurrent (uint8_t motor, trinamic_current_t type)
 {
-    return TMC2130_GetCurrent(tmcdriver[motor]);
+    return TMC2130_GetCurrent(tmcdriver[motor], type);
 }
 
 static TMC_chopconf_t getChopconf (uint8_t motor)

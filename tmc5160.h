@@ -1,7 +1,7 @@
 /*
  * tmc5160.h - register and message (datagram) descriptors for Trinamic TMC5160 stepper driver
  *
- * v0.0.5 / 2024-03-03
+ * v0.0.6 / 2024-09-28
  */
 
 /*
@@ -838,7 +838,7 @@ bool TMC5160_Init(TMC5160_t *driver);
 void TMC5160_SetDefaults (TMC5160_t *driver);
 const trinamic_cfg_params_t *TMC5160_GetConfigDefaults (void);
 void TMC5160_SetCurrent (TMC5160_t *driver, uint16_t mA, uint8_t hold_pct);
-uint16_t TMC5160_GetCurrent (TMC5160_t *driver);
+uint16_t TMC5160_GetCurrent (TMC5160_t *driver, trinamic_current_t type);
 bool TMC5160_MicrostepsIsValid (uint16_t usteps);
 void TMC5160_SetMicrosteps(TMC5160_t *driver, tmc5160_microsteps_t usteps);
 float TMC5160_GetTPWMTHRS (TMC5160_t *driver, float steps_mm);

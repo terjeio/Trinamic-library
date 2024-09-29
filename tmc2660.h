@@ -1,7 +1,7 @@
 /*
  * tmc2660.h - register and message (datagram) descriptors for Trinamic TMC2660 stepper driver
  *
- * v0.0.1 / 2024-03-03
+ * v0.0.2 / 2024-09-28
  */
 
 /*
@@ -342,7 +342,7 @@ bool TMC2660_Init(TMC2660_t *driver);
 void TMC2660_SetDefaults (TMC2660_t *driver);
 const trinamic_cfg_params_t *TMC2660_GetConfigDefaults (void);
 void TMC2660_SetCurrent (TMC2660_t *driver, uint16_t mA, uint8_t hold_pct);
-uint16_t TMC2660_GetCurrent (TMC2660_t *driver);
+uint16_t TMC2660_GetCurrent (TMC2660_t *driver, trinamic_current_t type);
 bool TMC2660_MicrostepsIsValid (uint16_t usteps);
 void TMC2660_SetMicrosteps(TMC2660_t *driver, tmc2660_microsteps_t usteps);
 

@@ -1,7 +1,7 @@
 /*
  * common.h - shared code for Trinamic drivers
  *
- * v0.0.6 / 2024-03-03
+ * v0.0.7 / 2024-09-28
  */
 
 /*
@@ -100,6 +100,13 @@ typedef enum {
    TMCMode_CoolStep,
    TMCMode_StallGuard,
 } trinamic_mode_t;
+
+typedef enum {
+   TMCCurrent_Min = 0,
+   TMCCurrent_Max,
+   TMCCurrent_Actual,
+   TMCCurrent_Hold,
+} trinamic_current_t;
 
 #pragma pack(push, 1)
 

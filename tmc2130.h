@@ -1,7 +1,7 @@
 /*
  * tmc2130.h - register and message (datagram) descriptors for Trinamic TMC2130 stepper driver
  *
- * v0.0.8 / 2024-03-03
+ * v0.0.9 / 2024-09-28
  */
 
 /*
@@ -699,7 +699,7 @@ bool TMC2130_Init(TMC2130_t *driver);
 void TMC2130_SetDefaults (TMC2130_t *driver);
 const trinamic_cfg_params_t *TMC2130_GetConfigDefaults (void);
 void TMC2130_SetCurrent (TMC2130_t *driver, uint16_t mA, uint8_t hold_pct);
-uint16_t TMC2130_GetCurrent (TMC2130_t *driver);
+uint16_t TMC2130_GetCurrent (TMC2130_t *driver, trinamic_current_t type);
 void TMC2130_SetTPWMTHRS (TMC2130_t *driver, float mm_sec, float steps_mm);
 float TMC2130_GetTPWMTHRS (TMC2130_t *driver, float steps_mm);
 bool TMC2130_MicrostepsIsValid (uint16_t usteps);
