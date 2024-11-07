@@ -1,7 +1,7 @@
 /*
  * tmc2660.c - interface for Trinamic TMC2660 stepper driver
  *
- * v0.0.2 / 2024-09-28
+ * v0.0.2 / 2024-11-07
  */
 
 /*
@@ -182,9 +182,6 @@ uint16_t TMC2660_GetCurrent (TMC2660_t *driver, trinamic_current_t type)
     uint8_t cs;
 
     switch(type) {
-        case TMCCurrent_Min:
-            cs = 0;
-            break;
         case TMCCurrent_Max:
             cs = 31;
             break;
@@ -194,9 +191,12 @@ uint16_t TMC2660_GetCurrent (TMC2660_t *driver, trinamic_current_t type)
         case TMCCurrent_Hold:
             cs = 0; // ?? return actual
             break;
+        default: // TMCCurrent_Min:
+            cs = 0;
+            break;
     }
 
-    return cs2rms_2660(driver, cs);
+    return (uint16_t)cs2rms_2660(driver, cs);
 }
 
 // r_sense = mOhm, Vsense = mV, current = mA (RMS)

@@ -1,7 +1,7 @@
 /*
  * tmc2209.c - interface for Trinamic TMC2209 stepper driver
  *
- * v0.0.7 / 2024-09-28
+ * v0.0.8 / 2024-11-07
  */
 
 /*
@@ -42,6 +42,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
 
+#include <math.h>
 #include <string.h>
 
 #include "tmc2209.h"
@@ -138,7 +139,7 @@ static void _set_rms_current (TMC2209_t *driver)
 {
     float maxv = (((float)(driver->config.r_sense + 20)) * (float)(32UL * driver->config.current)) * 1.41421f / 1000.0f;
 
-    uint8_t current_scaling = (uint8_t)(maxv / 325.0f) - 1;
+    int8_t current_scaling = (int8_t)(maxv / 325.0f) - 1;
 
     // If the current scaling is too low set the vsense bit and recalculate the current setting
     if ((driver->chopconf.reg.vsense = (current_scaling < 16)))
@@ -204,23 +205,28 @@ bool TMC2209_Init (TMC2209_t *driver)
 uint16_t TMC2209_GetCurrent (TMC2209_t *driver, trinamic_current_t type)
 {
     uint8_t cs;
+    bool vsense;
 
     switch(type) {
-        case TMCCurrent_Min:
-            cs = 0;
-            break;
         case TMCCurrent_Max:
             cs = 31;
+            vsense = 0;
             break;
         case TMCCurrent_Actual:
             cs = driver->ihold_irun.reg.irun;
+            vsense = driver->chopconf.reg.vsense;
             break;
         case TMCCurrent_Hold:
             cs = driver->ihold_irun.reg.ihold;
+            vsense = driver->chopconf.reg.vsense;
+            break;
+        default: // TMCCurrent_Min:
+            cs = 0;
+            vsense = 1;
             break;
     }
 
-    return (uint16_t)((float)(cs + 1) / 32.0f * (driver->chopconf.reg.vsense ? 180.0f : 325.0f) / (float)(driver->config.r_sense + 20) / 1.41421f * 1000.0f);
+    return (uint16_t)ceilf((float)(cs + 1) / 32.0f * (vsense ? 180.0f : 325.0f) / (float)(driver->config.r_sense + 20) / 1.41421f * 1000.0f);
 }
 
 // r_sense = mOhm, Vsense = mV, current = mA (RMS)

@@ -1,7 +1,7 @@
 /*
  * tmc2130.c - interface for Trinamic TMC2130 stepper driver
  *
- * v0.0.9 / 2024-09-28
+ * v0.0.10 / 2024-11-07
  */
 
 /*
@@ -42,6 +42,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
 
+#include <math.h>
 #include <string.h>
 
 #include "tmc2130.h"
@@ -159,11 +160,11 @@ static void _set_rms_current (TMC2130_t *driver)
 {
     float maxv = (((float)(driver->config.r_sense + 20)) * (float)(32UL * driver->config.current)) * 1.41421f / 1000.0f;
 
-    uint8_t current_scaling = (uint8_t)(maxv / 325.0f) - 1;
+    int8_t current_scaling = (int8_t)(maxv / 325.0f) - 1;
 
     // If the current scaling is too low set the vsense bit and recalculate the current setting
     if ((driver->chopconf.reg.vsense = (current_scaling < 16)))
-        current_scaling = (uint8_t)(maxv / 180.0f) - 1;
+        current_scaling = (int8_t)(maxv / 180.0f) - 1;
 
     driver->ihold_irun.reg.irun = current_scaling > 31 ? 31 : current_scaling;
     driver->ihold_irun.reg.ihold = (driver->ihold_irun.reg.irun * driver->config.hold_current_pct) / 100;
@@ -208,23 +209,28 @@ bool TMC2130_Init (TMC2130_t *driver)
 uint16_t TMC2130_GetCurrent (TMC2130_t *driver, trinamic_current_t type)
 {
     uint8_t cs;
+    bool vsense;
 
     switch(type) {
-        case TMCCurrent_Min:
-            cs = 0;
-            break;
         case TMCCurrent_Max:
             cs = 31;
+            vsense = 0;
             break;
         case TMCCurrent_Actual:
             cs = driver->ihold_irun.reg.irun;
+            vsense = driver->chopconf.reg.vsense;
             break;
         case TMCCurrent_Hold:
             cs = driver->ihold_irun.reg.ihold;
+            vsense = driver->chopconf.reg.vsense;
+            break;
+        default: // TMCCurrent_Min:
+            cs = 0;
+            vsense = 1;
             break;
     }
 
-    return (uint16_t)((float)(cs + 1) / 32.0f * (driver->chopconf.reg.vsense ? 180.0f : 325.0f) / (float)(driver->config.r_sense + 20) / 1.41421f * 1000.0f);
+    return (uint16_t)ceilf((float)(cs + 1) / 32.0f * (vsense ? 180.0f : 325.0f) / (float)(driver->config.r_sense + 20) / 1.41421f * 1000.0f);
 }
 
 // r_sense = mOhm, Vsense = mV, current = mA (RMS)

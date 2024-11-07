@@ -1,7 +1,7 @@
 /*
  * tmc5160.c - interface for Trinamic TMC5160 stepper driver
  *
- * v0.0.6 / 2024-09-28
+ * v0.0.7 / 2024-11-07
  */
 
 /*
@@ -241,9 +241,6 @@ uint16_t TMC5160_GetCurrent (TMC5160_t *driver, trinamic_current_t type)
     uint8_t cs;
 
     switch(type) {
-        case TMCCurrent_Min:
-            cs = 0;
-            break;
         case TMCCurrent_Max:
             cs = 31;
             break;
@@ -253,9 +250,12 @@ uint16_t TMC5160_GetCurrent (TMC5160_t *driver, trinamic_current_t type)
         case TMCCurrent_Hold:
             cs = driver->ihold_irun.reg.ihold;
             break;
+        default: // TMCCurrent_Min:
+            cs = 0;
+            break;
     }
 
-    return cs2rms(driver, cs);
+    return (uint16_t)cs2rms(driver, cs);
 }
 
 // r_sense = mOhm, Vsense = mV, current = mA (RMS)
