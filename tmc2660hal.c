@@ -1,7 +1,7 @@
 /*
  * tmc2660hal.c - interface for Trinamic TMC2660 stepper driver
  *
- * v0.0.2 / 2024-09-28
+ * v0.0.3 / 2024-11-16
  */
 
 /*
@@ -226,6 +226,8 @@ static void *get_register_addr (uint8_t motor, uint8_t addr)
 static const tmchal_t tmchal = {
     .driver = TMC2660,
     .name = "TMC2660",
+    .drvconf_address = TMC2660Reg_DRVCONF,
+
     .get_config = getConfig,
 
     .microsteps_isvalid = isValidMicrosteps,

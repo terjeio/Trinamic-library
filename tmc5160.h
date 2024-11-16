@@ -1,7 +1,7 @@
 /*
  * tmc5160.h - register and message (datagram) descriptors for Trinamic TMC5160 stepper driver
  *
- * v0.0.6 / 2024-09-28
+ * v0.0.7 / 2024-11-16
  */
 
 /*
@@ -73,8 +73,8 @@ typedef enum {
 #define TMC5160_TBL                 1   // Blanking time: 0 = 16, 1 = 24, 2 = 36, 3 = 54 clocks
 #define TMC5160_CHM                 0   // Chopper mode: 0 = spreadCycle, 1 = constant off time
 // TMC5160_CHM 0 defaults
-#define TMC5160_HSTRT               6   // Hysteresis start: 1 - 8
-#define TMC5160_HEND                2   // Hysteresis end: -3 - 12
+#define TMC5160_HSTRT               3   // Hysteresis start: 1 - 8
+#define TMC5160_HEND                5   // Hysteresis end: -3 - 12
 #define TMC5160_HMAX               16   // HSTRT + HEND
 // TMC5160_CHM 1 defaults
 #define TMC5160_TFD                 13  // fd3 & hstrt: 0 - 15

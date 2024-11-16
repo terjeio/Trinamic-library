@@ -1,7 +1,7 @@
 /*
  * tmchal.h - HAL interface for Trinamic stepper drivers
  *
- * v0.0.7 / 2024-09-28
+ * v0.0.8 / 2024-11-16
  */
 
 /*
@@ -136,6 +136,7 @@ typedef void *(*tmc_get_register_addr)(uint8_t motor, uint8_t addr);
 typedef struct {
     const char *name;
     trinamic_driver_t driver;
+    uint8_t drvconf_address; // address of driver configuration register
 
     tmc_get_config get_config;
 

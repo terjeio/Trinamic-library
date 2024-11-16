@@ -1,7 +1,7 @@
 /*
  * tmc2209.h - register and message (datagram) descriptors for Trinamic TMC2209 stepper driver
  *
- * v0.0.7 / 2024-09-28
+ * v0.0.8 / 2024-11-16
  */
 
 /*
@@ -71,7 +71,7 @@ typedef enum {
 // CHOPCONF
 #define TMC2209_INTPOL              1   // Step interpolation: 0 = off, 1 = on
 #define TMC2209_TOFF                3   // Off time: 1 - 15, 0 = MOSFET disable
-#define TMC2209_TBL                 0   // Blanking time: 0 = 16, 1 = 24, 2 = 36, 3 = 54 clocks
+#define TMC2209_TBL                 1   // Blanking time: 0 = 16, 1 = 24, 2 = 36, 3 = 54 clocks
 #define TMC2209_HSTRT               1   // Hysteresis start: 1 - 8
 #define TMC2209_HEND               -1   // Hysteresis end: -3 - 12
 #define TMC2209_HMAX               16   // HSTRT + HEND

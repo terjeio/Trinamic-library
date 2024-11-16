@@ -1,7 +1,7 @@
 /*
  * tmc2660.c - interface for Trinamic TMC2660 stepper driver
  *
- * v0.0.2 / 2024-11-07
+ * v0.0.3 / 2024-11-16
  */
 
 /*
@@ -158,8 +158,10 @@ bool TMC2660_Init (TMC2660_t *driver)
         return false;
 
     tmc_spi20_write(driver->config.motor, (TMC_spi20_datagram_t *)&driver->drvconf);
+    tmc_spi20_write(driver->config.motor, (TMC_spi20_datagram_t *)&driver->drvctrl);
     tmc_spi20_write(driver->config.motor, (TMC_spi20_datagram_t *)&driver->chopconf);
     tmc_spi20_write(driver->config.motor, (TMC_spi20_datagram_t *)&driver->smarten);
+    tmc_spi20_write(driver->config.motor, (TMC_spi20_datagram_t *)&driver->sgcsconf);
 
     TMC2660_SetMicrosteps(driver, (tmc2660_microsteps_t)driver->config.microsteps);
     TMC2660_SetCurrent(driver, driver->config.current, driver->config.hold_current_pct);
@@ -292,8 +294,12 @@ TMC2660_datagram_t *TMC2660_GetRegPtr (TMC2660_t *driver, tmc2660_regaddr_t reg)
     TMC2660_datagram_t *ptr = (TMC2660_datagram_t *)driver;
 
     while(ptr && ptr->addr != reg) {
-        if(ptr->addr == TMC2660Reg_DRVCONF)
+        if(ptr->addr == TMC2660Reg_DRVCONF) {
+            if(ptr->addr == reg)
+                break;
             ptr = NULL;
+        }
+        ptr++;
     }
 
     return ptr;
