@@ -1,7 +1,7 @@
 /*
  * tmc2660.c - interface for Trinamic TMC2660 stepper driver
  *
- * v0.0.3 / 2024-11-16
+ * v0.0.4 / 2024-11-17
  */
 
 /*
@@ -49,6 +49,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "driver.h"
 
 static const trinamic_cfg_params_t TMC2660_cfg_params = {
+
+    .vsense[0] = 325.0f,
+    .vsense[1] = 173.0f,
 
     .cap.drvconf = 0x1FFFF,
 
@@ -126,12 +129,13 @@ const trinamic_cfg_params_t *TMC2660_GetConfigDefaults (void)
 
 static void _set_rms_current (TMC2660_t *driver)
 {
-    float maxv = ((float)driver->config.r_sense * (float)driver->config.current * 32.0f) / 1000000.0f;
+    float maxv = ((float)driver->config.r_sense * (float)(32UL * driver->config.current)) * 1.41421f / 1000.0f;
 
-    uint8_t current_scaling = (uint8_t)((maxv / 0.31f) - 0.5f);
+    int8_t current_scaling = (int8_t)(maxv / TMC2660_cfg_params.vsense[0]) - 1;
 
+    // If the current scaling is too low set the vsense bit and recalculate the current setting
     if ((driver->drvconf.vsense = (current_scaling < 16)))
-        current_scaling = (uint8_t)((maxv / 0.165f) - 0.5f);
+        current_scaling = (int8_t)(maxv / TMC2660_cfg_params.vsense[1]) - 1;
 
     driver->sgcsconf.cs = current_scaling > 31 ? 31 : current_scaling;
 }
@@ -169,36 +173,31 @@ bool TMC2660_Init (TMC2660_t *driver)
     return true;
 }
 
-uint_fast16_t cs2rms_2660 (TMC2660_t *driver, uint8_t cs)
-{
-    float v_sense = driver->drvconf.vsense ? 165.0f : 325.0f;
-    
-    float iRMS = (248.0f / 256.0f) * (((float)cs + 1.0f) / 32.0f) * (v_sense / (float)driver->config.r_sense) * (1.0f / sqrt(2.0f));
-
-    return (uint_fast16_t)(iRMS * 1000.0f);
-
-}
-
 uint16_t TMC2660_GetCurrent (TMC2660_t *driver, trinamic_current_t type)
 {
     uint8_t cs;
+    bool vsense;
 
     switch(type) {
         case TMCCurrent_Max:
             cs = 31;
+            vsense = 0;
             break;
         case TMCCurrent_Actual:
             cs = driver->sgcsconf.cs;
+            vsense = driver->drvconf.vsense;
             break;
         case TMCCurrent_Hold:
             cs = 0; // ?? return actual
+            vsense = 0;
             break;
         default: // TMCCurrent_Min:
             cs = 0;
+            vsense = 0;
             break;
     }
 
-    return (uint16_t)cs2rms_2660(driver, cs);
+    return (uint16_t)ceilf((float)(cs + 1) / 32.0f * TMC2660_cfg_params.vsense[vsense] / (float)driver->config.r_sense / 1.41421f * 1000.0f);
 }
 
 // r_sense = mOhm, Vsense = mV, current = mA (RMS)
@@ -259,6 +258,9 @@ void TMC2660_SetConstantOffTimeChopper (TMC2660_t *driver, uint8_t constant_off_
 TMC2660_drvstatus_dgr_t TMC2660_WriteRegister (TMC2660_t *driver, TMC2660_datagram_t *reg)
 {
     TMC2660_drvstatus_t status;
+
+    if(reg->addr == TMC2660Reg_DRVCONF) // do not overwrite vsense bit!
+        ((TMC2660_drvconf_reg_t *)reg)->vsense = driver->drvconf.vsense;
 
     status.response.value = tmc_spi20_write(driver->config.motor, (TMC_spi20_datagram_t *)reg).value;
 

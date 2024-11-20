@@ -1,7 +1,7 @@
 /*
  * common.h - shared code for Trinamic drivers
  *
- * v0.0.7 / 2024-09-28
+ * v0.0.8 / 2024-11-17
  */
 
 /*
@@ -83,6 +83,7 @@ typedef struct {
 } trinamic_cfg_t;
 
 typedef struct {
+     float vsense[2]; // mV
      trinamic_cfg_t cap;
      trinamic_cfg_t dflt;
 } trinamic_cfg_params_t;
@@ -106,6 +107,7 @@ typedef enum {
    TMCCurrent_Max,
    TMCCurrent_Actual,
    TMCCurrent_Hold,
+//   TMCCurrent_Momentary,
 } trinamic_current_t;
 
 #pragma pack(push, 1)
