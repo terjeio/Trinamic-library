@@ -1,7 +1,7 @@
 /*
  * tmc5160.c - interface for Trinamic TMC5160 stepper driver
  *
- * v0.0.7 / 2024-11-07
+ * v0.0.7 / 2024-12-05
  */
 
 /*
@@ -224,9 +224,9 @@ bool TMC5160_Init (TMC5160_t *driver)
     return driver->chopconf.reg.value == chopconf;
 }
 
-uint_fast16_t cs2rms (TMC5160_t *driver, uint8_t CS)
+uint_fast16_t cs2rms (TMC5160_t *driver, uint8_t CS, uint8_t global_scaler)
 {
-    uint32_t numerator = (driver->global_scaler.reg.scaler ? driver->global_scaler.reg.scaler : 256) * (CS + 1);
+    uint32_t numerator = (global_scaler ? global_scaler : 256) * (CS + 1);
     numerator *= 325;
     numerator >>= (8 + 5); // Divide by 256 and 32
     numerator *= 1000000;
@@ -238,24 +238,28 @@ uint_fast16_t cs2rms (TMC5160_t *driver, uint8_t CS)
 
 uint16_t TMC5160_GetCurrent (TMC5160_t *driver, trinamic_current_t type)
 {
-    uint8_t cs;
+    uint8_t cs, global_scaler;
 
     switch(type) {
         case TMCCurrent_Max:
             cs = 31;
+            global_scaler = 255;
             break;
         case TMCCurrent_Actual:
             cs = driver->ihold_irun.reg.irun;
+            global_scaler = driver->global_scaler.reg.scaler;
             break;
         case TMCCurrent_Hold:
             cs = driver->ihold_irun.reg.ihold;
+            global_scaler = driver->global_scaler.reg.scaler;
             break;
         default: // TMCCurrent_Min:
             cs = 0;
+            global_scaler = 1;
             break;
     }
 
-    return (uint16_t)cs2rms(driver, cs);
+    return (uint16_t)cs2rms(driver, cs, global_scaler);
 }
 
 // r_sense = mOhm, Vsense = mV, current = mA (RMS)
