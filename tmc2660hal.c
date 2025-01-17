@@ -1,13 +1,13 @@
 /*
  * tmc2660hal.c - interface for Trinamic TMC2660 stepper driver
  *
- * v0.0.3 / 2024-11-16
+ * v0.0.4 / 2025-01-17
  */
 
 /*
 
 Copyright (c) 2023-2024, Expatria Technologies,
-Copyright (c) 2024, Terje Io
+Copyright (c) 2024-2025, Terje Io
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -118,7 +118,7 @@ static TMC_ihold_irun_t getIholdIrun (uint8_t motor)
 {
     TMC_ihold_irun_t ihold_irun;
 
-    ihold_irun.ihold = tmcdriver[motor]->config.hold_current_pct * tmcdriver[motor]->sgcsconf.cs;
+    ihold_irun.ihold = tmcdriver[motor]->config.hold_current_pct * tmcdriver[motor]->sgcsconf.cs / 100;
     ihold_irun.irun = tmcdriver[motor]->sgcsconf.cs;
     ihold_irun.iholddelay = 2; //standstill delay is fixed with 2660.
 
