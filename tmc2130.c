@@ -1,12 +1,12 @@
 /*
  * tmc2130.c - interface for Trinamic TMC2130 stepper driver
  *
- * v0.0.11 / 2024-11-17
+ * v0.0.12 / 2025-01-24
  */
 
 /*
 
-Copyright (c) 2018-2024, Terje Io
+Copyright (c) 2018-2025, Terje Io
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -196,6 +196,7 @@ bool TMC2130_Init (TMC2130_t *driver)
 
     tmc_spi_write(driver->config.motor, (TMC_spi_datagram_t *)&driver->gconf);
     tmc_spi_write(driver->config.motor, (TMC_spi_datagram_t *)&driver->coolconf);
+    tmc_spi_write(driver->config.motor, (TMC_spi_datagram_t *)&driver->chopconf);
     tmc_spi_write(driver->config.motor, (TMC_spi_datagram_t *)&driver->pwmconf);
     tmc_spi_write(driver->config.motor, (TMC_spi_datagram_t *)&driver->tpowerdown);
     tmc_spi_write(driver->config.motor, (TMC_spi_datagram_t *)&driver->tpwmthrs);
