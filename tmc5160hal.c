@@ -169,7 +169,7 @@ static void stallGuardEnable (uint8_t motor, float feed_rate, float steps_mm, in
     TMC5160_t *driver = tmcdriver[motor];
 
     driver->gconf.reg.diag1_stall = true;
-    driver->gconf.reg.en_pwm_mode = false; // stealthChop
+    driver->gconf.reg.en_pwm_mode = false; // stealthChop off
     tmc_spi_write(driver->config.motor, (TMC_spi_datagram_t *)&driver->gconf);
 
     driver->pwmconf.reg.pwm_autoscale = false;
@@ -187,7 +187,7 @@ static void stealthChopEnable (uint8_t motor)
     TMC5160_t *driver = tmcdriver[motor];
 
     driver->gconf.reg.diag1_stall = false;
-    driver->gconf.reg.en_pwm_mode = true; // stealthChop
+    driver->gconf.reg.en_pwm_mode = true; // stealthChop on
     tmc_spi_write(driver->config.motor, (TMC_spi_datagram_t *)&driver->gconf);
 
     driver->pwmconf.reg.pwm_autoscale = true;
@@ -200,7 +200,7 @@ static void coolStepEnable (uint8_t motor)
 {
     TMC5160_t *driver = tmcdriver[motor];
 
-    driver->gconf.reg.en_pwm_mode = false; // stealthChop
+    driver->gconf.reg.en_pwm_mode = false; // stealthChop off
     tmc_spi_write(driver->config.motor, (TMC_spi_datagram_t *)&driver->gconf);
 
     driver->pwmconf.reg.pwm_autoscale = false;

@@ -1,13 +1,13 @@
 /*
  * tmc2660.h - register and message (datagram) descriptors for Trinamic TMC2660 stepper driver
  *
- * v0.0.2 / 2024-09-28
+ * v0.0.2 / 2025-02-07
  */
 
 /*
 
 Copyright (c) 2023-2024, Expatria Technologies,
-Copyright (c) 2024, Terje Io
+Copyright (c) 2024-2025, Terje Io
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -351,6 +351,6 @@ void TMC2660_SetMicrosteps(TMC2660_t *driver, tmc2660_microsteps_t usteps);
 void TMC2660_SetConstantOffTimeChopper(TMC2660_t *driver, uint8_t constant_off_time, uint8_t blank_time, uint8_t fast_decay_time, int8_t sine_wave_offset, bool use_current_comparator);
 TMC2660_datagram_t *TMC2660_GetRegPtr (TMC2660_t *driver, tmc2660_regaddr_t reg);
 TMC2660_drvstatus_dgr_t TMC2660_WriteRegister (TMC2660_t *driver, TMC2660_datagram_t *reg);
-TMC2660_drvstatus_dgr_t TMC2660_ReadRegister (TMC2660_t *driver, TMC2660_datagram_t *reg, uint8_t rdsel);
+TMC2660_drvstatus_dgr_t TMC2660_ReadRegister (TMC2660_t *driver, TMC2660_datagram_t *reg, tmc2660_rdsel_t rdsel);
 
 #endif
