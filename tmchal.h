@@ -1,12 +1,12 @@
 /*
  * tmchal.h - HAL interface for Trinamic stepper drivers
  *
- * v0.0.8 / 2024-11-16
+ * v0.0.9 / 2025-06-08
  */
 
 /*
 
-Copyright (c) 2021-2024, Terje Io
+Copyright (c) 2021-2025, Terje Io
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -126,6 +126,7 @@ typedef void (*tmc_sg_filter)(uint8_t motor, bool on);
 typedef void (*tmc_sg_stall_value)(uint8_t motor, int16_t val);
 typedef int16_t (*tmc_get_sg_stall_value)(uint8_t motor);
 typedef uint8_t (*tmc_pwm_scale)(uint8_t motor);
+typedef float (*tmc_get_temp)(uint8_t motor);
 typedef bool (*tmc_vsense)(uint8_t motor);
 typedef void (*tmc_coolconf)(uint8_t motor, trinamic_coolconf_t coolconf);
 typedef void (*tmc_chopper_timing)(uint8_t motor, trinamic_chopconf_t timing);
@@ -166,6 +167,7 @@ typedef struct {
     tmc_get_en_pwm_mode get_en_pwm_mode;
     tmc_stealthChop stealthChop;
     tmc_pwm_scale pwm_scale;
+    tmc_get_temp get_temp;
 // end of dependent fuctions
 
     tmc_sg_filter sg_filter;

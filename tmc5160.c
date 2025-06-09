@@ -176,7 +176,7 @@ static void _set_rms_current (TMC5160_t *driver)
     } while(scaler && scaler < 128);
 
     driver->global_scaler.reg.scaler = scaler;
-    driver->ihold_irun.reg.irun = CS > 31 ? 31 : CS;
+    driver->ihold_irun.reg.irun = CS;
     driver->ihold_irun.reg.ihold = (driver->ihold_irun.reg.irun * driver->config.hold_current_pct) / 100;
 }
 
@@ -224,7 +224,7 @@ bool TMC5160_Init (TMC5160_t *driver)
     return driver->chopconf.reg.value == chopconf;
 }
 
-uint_fast16_t cs2rms (TMC5160_t *driver, uint8_t CS, uint8_t global_scaler)
+static uint_fast16_t cs2rms (TMC5160_t *driver, uint8_t CS, uint8_t global_scaler)
 {
     uint32_t numerator = (global_scaler ? global_scaler : 256) * (CS + 1);
     numerator *= 325;

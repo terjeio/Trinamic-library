@@ -1,12 +1,12 @@
 /*
  * common.h - shared code for Trinamic drivers
  *
- * v0.0.8 / 2024-11-17
+ * v0.0.9 / 2025-06-08
  */
 
 /*
 
-Copyright (c) 2021-2024, Terje Io
+Copyright (c) 2021-2025, Terje Io
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -93,6 +93,7 @@ typedef enum {
     TMC2130,
     TMC5160,
     TMC2660,
+    TMC2240,
     TMCNULL
 } trinamic_driver_t;
 
@@ -194,8 +195,21 @@ bool tmc_microsteps_validate (uint16_t microsteps);
 uint8_t tmc_microsteps_to_mres (uint16_t microsteps);
 uint32_t tmc_calc_tstep (trinamic_config_t *config, float mm_sec, float steps_mm);
 float tmc_calc_tstep_inv (trinamic_config_t *config, uint32_t tstep, float steps_mm);
+void tmc_crc8 (uint8_t *datagram, uint8_t datagramLength);
 void tmc_motors_set (uint8_t motors);
 uint8_t tmc_motors_get (void);
+
+static inline void tmc_byteswap (uint8_t data[4])
+{
+    uint8_t tmp;
+
+    tmp = data[0];
+    data[0] = data[3];
+    data[3] = tmp;
+    tmp = data[1];
+    data[1] = data[2];
+    data[2] = tmp;
+}
 
 extern TMC_spi_status_t tmc_spi_write (trinamic_motor_t driver, TMC_spi_datagram_t *datagram);
 extern TMC_spi_status_t tmc_spi_read (trinamic_motor_t driver, TMC_spi_datagram_t *datagram);

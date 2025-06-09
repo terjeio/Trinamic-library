@@ -771,7 +771,7 @@ typedef union {
     TMC5160_gconf_reg_t gconf;
     TMC5160_gstat_reg_t gstat;
     TMC5160_ioin_reg_t ioin;
-    TMC5160_global_scaler_dgr_t global_scaler;
+    TMC5160_global_scaler_reg_t global_scaler;
     TMC5160_ihold_irun_reg_t ihold_irun;
     TMC5160_tpowerdown_reg_t tpowerdown;
     TMC5160_tstep_reg_t tstep;

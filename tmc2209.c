@@ -299,36 +299,6 @@ void TMC2209_SetConstantOffTimeChopper (TMC2209_t *driver, uint8_t constant_off_
     TMC2209_WriteRegister(driver, (TMC2209_datagram_t *)&driver->chopconf);
 }
 
-static void calcCRC (uint8_t *datagram, uint8_t datagramLength)
-{
-    int i,j;
-    uint8_t *crc = datagram + (datagramLength - 1); // CRC located in last byte of message
-    uint8_t currentByte;
-    *crc = 0;
-    for (i = 0; i < (datagramLength - 1); i++) {    // Execute for all bytes of a message
-        currentByte = datagram[i];                  // Retrieve a byte to be sent from Array
-        for (j = 0; j < 8; j++) {
-            if ((*crc >> 7) ^ (currentByte & 0x01)) // update CRC based result of XOR operation
-                *crc = (*crc << 1) ^ 0x07;
-            else
-                *crc = (*crc << 1);
-            currentByte = currentByte >> 1;
-        } // for CRC bit
-    }
-}
-
-static void byteswap (uint8_t data[4])
-{
-    uint8_t tmp;
-
-    tmp = data[0];
-    data[0] = data[3];
-    data[3] = tmp;
-    tmp = data[1];
-    data[1] = data[2];
-    data[2] = tmp;
-}
-
 bool TMC2209_WriteRegister (TMC2209_t *driver, TMC2209_datagram_t *reg)
 {
     TMC_uart_write_datagram_t datagram;
@@ -339,9 +309,9 @@ bool TMC2209_WriteRegister (TMC2209_t *driver, TMC2209_datagram_t *reg)
     datagram.msg.addr.write = 1;
     datagram.msg.payload.value = reg->payload.value;
 
-    byteswap(datagram.msg.payload.data);
+    tmc_byteswap(datagram.msg.payload.data);
 
-    calcCRC(datagram.data, sizeof(TMC_uart_write_datagram_t));
+    tmc_crc8(datagram.data, sizeof(TMC_uart_write_datagram_t));
 
     tmc_uart_write(driver->config.motor, &datagram);
 
@@ -360,16 +330,16 @@ bool TMC2209_ReadRegister (TMC2209_t *driver, TMC2209_datagram_t *reg)
     datagram.msg.slave = driver->config.motor.address;
     datagram.msg.addr.value = reg->addr.value;
     datagram.msg.addr.write = 0;
-    calcCRC(datagram.data, sizeof(TMC_uart_read_datagram_t));
+    tmc_crc8(datagram.data, sizeof(TMC_uart_read_datagram_t));
 
     res = tmc_uart_read(driver->config.motor, &datagram);
 
     if(res->msg.slave == 0xFF && res->msg.addr.value == datagram.msg.addr.value) {
         uint8_t crc = res->msg.crc;
-        calcCRC(res->data, sizeof(TMC_uart_write_datagram_t));
+        tmc_crc8(res->data, sizeof(TMC_uart_write_datagram_t));
         if((ok = crc == res->msg.crc)) {
             reg->payload.value = res->msg.payload.value;
-            byteswap(reg->payload.data);
+            tmc_byteswap(reg->payload.data);
         }
     }
 
