@@ -119,7 +119,7 @@ typedef enum {
 
 typedef uint8_t tmc2130_regaddr_t;
 
-enum tmc2130_regaddr_t {
+enum tmc2130_regaddr {
     TMC2130Reg_GCONF        = 0x00,
     TMC2130Reg_GSTAT        = 0x01,
     TMC2130Reg_IOIN         = 0x04,
