@@ -1,7 +1,7 @@
 /*
  * tmc2240hal.c - interface for Trinamic TMC2240 stepper driver
  *
- * v0.0.1 / 2025-06-08
+ * v0.0.3 / 2026-04-16
  */
 
 /*
@@ -182,7 +182,7 @@ static void stallGuardEnable (uint8_t motor, float feed_rate, float steps_mm, in
 {
     TMC2240_t *driver = tmcdriver[motor];
 
-    driver->gconf.reg.diag1_stall = true;
+    driver->gconf.reg.STALL_OUTPUT = true;
     driver->gconf.reg.en_pwm_mode = true; // stealthChop on
     tmc2240_write(driver, gconf);
 
@@ -200,7 +200,7 @@ static void stealthChopEnable (uint8_t motor)
 {
     TMC2240_t *driver = tmcdriver[motor];
 
-    driver->gconf.reg.diag1_stall = false;
+    driver->gconf.reg.STALL_OUTPUT = false;
     driver->gconf.reg.en_pwm_mode = true; // stealthChop on
     tmc2240_write(driver, gconf);
 
@@ -214,7 +214,7 @@ static void coolStepEnable (uint8_t motor)
 {
     TMC2240_t *driver = tmcdriver[motor];
 
-    driver->gconf.reg.diag1_stall = false;
+    driver->gconf.reg.STALL_OUTPUT = false;
     driver->gconf.reg.en_pwm_mode = false; // stealthChop off
     tmc2240_write(driver, gconf);
 
@@ -263,7 +263,7 @@ static bool stealthChopGet (uint8_t motor)
 
 static void sg_filter (uint8_t motor, bool val)
 {
-    tmcdriver[motor]->sg4_thrs.reg.sg4_fil_en = val;
+    tmcdriver[motor]->sg4_thrs.reg.sg4_filt_en = val;
     tmc2240_write(tmcdriver[motor], sg4_thrs);
 }
 

@@ -1,7 +1,7 @@
 /*
  * tmc2240.c - interface for Trinamic tmc2240 stepper driver
  *
- * v0.0.1 / 2025-06-08
+ * v0.0.3 / 2026-04-16
  */
 
 /*
@@ -91,6 +91,7 @@ static const TMC2240_t tmc2240_defaults = {
     // register adresses
     .gconf.addr.reg = TMC2240Reg_GCONF,
 //    .gconf.reg.en_pwm_mode = TMC2240_EN_PWM_MODE,
+//    .gconf.reg.STALL_OUTPUT = 1,
     .gstat.addr.reg = TMC2240Reg_GSTAT,
     .ioin.addr.reg = TMC2240Reg_IOIN,
     .ifcnt.addr.reg = TMC2240Reg_IFCNT,

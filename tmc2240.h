@@ -1,12 +1,12 @@
 /*
  * tmc2240.h - register and message (datagram) descriptors for Trinamic TMC2240 stepper driver
  *
- * v0.0.2 / 2025-10-08
+ * v0.0.3 / 2026-04-16
  */
 
 /*
 
-Copyright (c) 2025, Terje Io
+Copyright (c) 2025-2026, Terje Io
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -75,6 +75,9 @@ typedef enum {
 #endif
 #ifndef TMC2240_HOLD_CURRENT_PCT
 #define TMC2240_HOLD_CURRENT_PCT    50
+#endif
+#ifndef TMC2240_STALL_OUTPUT
+#define TMC2240_STALL_OUTPUT        0
 #endif
 
 // DRV_CONF
@@ -176,6 +179,12 @@ typedef enum {
 #endif
 
 // end of default values
+
+#if TMC2240_STALL_OUTPUT == 1
+#define STALL_OUTPUT diag1_stall
+#else
+#define STALL_OUTPUT diag0_stall
+#endif
 
 #if TMC2240_MODE == 0   // StealthChop
 #define TMC2240_PWM_AUTOSCALE 1
@@ -716,7 +725,7 @@ typedef union {
     struct {
         uint32_t
         sg4_thrs        :8,
-        sg4_fil_en      :1,
+        sg4_filt_en     :1,
         sg_angle_offset :1,
         reserved        :22;
     };
