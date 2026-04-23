@@ -1,12 +1,12 @@
 /*
  * tmc2240hal.h - interface for Trinamic TMC2240 stepper driver
  *
- * v0.0.1 / 2025-06-08
+ * v0.0.4 / 2026-04-23
  */
 
 /*
 
-Copyright (c) 2025, Terje Io
+Copyright (c) 2025-2026, Terje Io
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -41,6 +41,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "tmc2240.h"
 #include "tmchal.h"
+
+#ifndef TMC2240_STALLGUARD4
+#define TMC2240_STALLGUARD4 1 // Set to 0 for StallGuard2
+#endif
 
 #ifdef TMC_UART
 const tmchal_t *TMC2240_AddMotor (motor_map_t motor, uint8_t address, uint16_t current, uint8_t microsteps, uint8_t r_sense);

@@ -1,12 +1,12 @@
 /*
  * tmc2240.c - interface for Trinamic tmc2240 stepper driver
  *
- * v0.0.3 / 2026-04-16
+ * v0.0.4 / 2026-04-23
  */
 
 /*
 
-Copyright (c) 2025, Terje Io
+Copyright (c) 2025-2026, Terje Io
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -127,7 +127,7 @@ static const TMC2240_t tmc2240_defaults = {
     .chopconf.reg.tbl = TMC2240_TBL,
     .chopconf.reg.hend_offset = TMC2240_HEND + 3,
 #if TMC2240_CHM == 0
-    .chopconf.reg.hend_offset = TMC2240_HSTRT - 1,
+    .chopconf.reg.hstrt_tfd = TMC2240_HSTRT - 1,
 #else
     .chopconf.reg.fd3 = (TMC2240_TFD & 0x08) >> 3,
     .chopconf.reg.hstrt_tfd = TMC2240_TFD & 0x07,
